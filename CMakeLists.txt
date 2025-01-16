@@ -1,27 +1,29 @@
-cmake_minimum_required(VERSION 3.10)
-project(DmxRasterizer)
+cmake_minimum_required(VERSION 3.31)
+project(DmxRasterizer VERSION 0.1.0)
 
 set(CMAKE_CXX_STANDARD 20)
 
-set(CMAKE_VERBOSE_MAKEFILE ON)
+if(DEFINED ENV{EXTERNAL_CXX_LIBRARIES})
+	file(TO_CMAKE_PATH "$ENV{EXTERNAL_CXX_LIBRARIES}" EXTRN)
+else()
+	message(FATAL_ERROR "Environment variable EXTRN is not set!")
+endif()
 
-# Use the LIB environment variable
-set(INC $ENV{INCLUDE})
-set(GLAD_PATH_SRC "G:/PRJ/DEV/LIBS/GLAD/src/glad.c")
+include_directories(${EXTRN}/GLAD/include)
+include_directories(${EXTRN}/GLFW/include)
+include_directories(${EXTRN}/GLM)
 
-include_directories(${INC}/GLAD/include)
-include_directories(${INC}/GLFW/include)
-include_directories(${INC}/GLM)
+add_library(glad STATIC "${EXTRN}/glad/src/glad.c")
 
 set(SOURCE_FILES
    	main.cpp
 		shader.cpp
-		${GLAD_PATH_SRC}
 )
 
 add_executable(${PROJECT_NAME} ${SOURCE_FILES})
 
 target_link_libraries(
-	${PROJECT_NAME}
-	"G:/PRJ/DEV/LIBS/GLFW/lib/glfw3.lib"
+	${PROJECT_NAME} PRIVATE
+	glad
+	"${EXTRN}/GLFW/lib/glfw3.lib"
 )
