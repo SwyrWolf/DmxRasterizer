@@ -2,19 +2,14 @@
 
 out vec4 FragColor;
 
-uniform float dmxData[512];
+uniform sampler1D dmxDataTexture; // DMX data texture
+uniform vec2 resolution;          // Screen resolution
 
 void main() {
-	int blockX = int(gl_FragCoord.x / 8.0);
-	int blockY = int(gl_FragCoord.y / 8.0);
-
-	// 512 * 8 = 4096 -- 4096 / 4 = 1024
-	int blockIndex = blockX + blockY * (1024/8);
-
-	if (blockIndex < 512) {
-		float brightness = dmxData[blockIndex];
-		FragColor = vec4(brightness, brightness, brightness, 1.0); // Render grayscale block
-	} else {
-		FragColor = vec4(0.0, 0.0, 0.0, 0.0); 
-	}
+    vec2 blockSize = vec2(16.0, 16.0);
+    ivec2 blockCoord = ivec2(gl_FragCoord.xy / blockSize);
+    int blockIndex = blockCoord.x + blockCoord.y * int(resolution.x / blockSize.x);
+    blockIndex = clamp(blockIndex, 0, 1559);
+    float brightness = texture(dmxDataTexture, float(blockIndex) / 1560.0).r;
+    FragColor = vec4(brightness, brightness, brightness, 1.0);
 }

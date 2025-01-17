@@ -8,6 +8,7 @@
 #include <cstring>
 #include <fstream>
 #include <sstream>
+#include <cstdint>
 
 #include "shader.hpp"
 
@@ -21,8 +22,13 @@
 #define INET_ADDRSTRLEN 16
 #endif
 
-unsigned char dmxData[512] = {0};
+const uint32_t TOTAL_DMX_CHANNELS = 1560;
+const uint32_t RENDER_WIDTH = 1920;
+const uint32_t RENDER_HEIGHT = 208;
 
+unsigned char dmxData[TOTAL_DMX_CHANNELS] = {0};
+float dmxDataNormalized[TOTAL_DMX_CHANNELS] = {0.0f};
+GLuint dmxDataTexture;
 
 SOCKET setupArtNetSocket(int port) {
 	WSADATA wsaData;
@@ -101,6 +107,8 @@ void receiveArtNetData(SOCKET sock, unsigned char* dmxData) {
 	}
 
 	if (bytesReceived > 18 && std::strncmp(buffer, "Art-Net", 7) == 0) {
+		uint16_t universeID = buffer[14] | (buffer[15] << 8);
+		int universeOffset = (universeID % 2) * 512;
 		uint8_t* dmxStart = (uint8_t*)&buffer[18];
 		std::memcpy(dmxData, dmxStart, std::min(bytesReceived - 18, 512));
 	}
@@ -130,7 +138,7 @@ int main(int argc, char* argv[]) {
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-	GLFWwindow* window = glfwCreateWindow(1440, 64, "DMX Shader Renderer", NULL, NULL);
+	GLFWwindow* window = glfwCreateWindow(RENDER_WIDTH, RENDER_HEIGHT, "DMX Shader Renderer", NULL, NULL);
 	if (!window) {
 		std::cerr << "Failed to create GLFW window" << std::endl;
 		glfwTerminate();
@@ -143,9 +151,17 @@ int main(int argc, char* argv[]) {
 		return -1;
 	}
 
-	glViewport(0, 0, 1024, 1024);
+	glViewport(0, 0, RENDER_WIDTH, RENDER_HEIGHT);
+
+	glGenTextures(1, &dmxDataTexture);
+	glBindTexture(GL_TEXTURE_1D, dmxDataTexture);
+	glTexImage1D(GL_TEXTURE_1D, 0, GL_R32F, TOTAL_DMX_CHANNELS, 0, GL_RED, GL_FLOAT, dmxDataNormalized);
+	glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
 	Shader shader("shaders/vertex.glsl", "shaders/frag.glsl");
+	glUseProgram(shader.ID);
+	glUniform2f(glGetUniformLocation(shader.ID, "resolution"), RENDER_WIDTH, RENDER_HEIGHT);
 	float vertices[] = {
 		-1.0f,  1.0f,  0.0f, 1.0f, // Top-left
 		-1.0f, -1.0f,  0.0f, 0.0f, // Bottom-left
@@ -161,76 +177,59 @@ int main(int argc, char* argv[]) {
 	glGenBuffers(1, &VBO);
 
 	glBindVertexArray(VAO);
-
 	glBindBuffer(GL_ARRAY_BUFFER, VBO);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-
 	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
 	glEnableVertexAttribArray(0);
-
 	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
 	glEnableVertexAttribArray(1);
 
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
-	glBindVertexArray(0);
-
 	SOCKET artNetSocket = setupArtNetSocket(port);
 
-	float dmxDataNormalized[512] = {0}; // Normalized DMX data for the first 15 channels
-
 	SpoutSender sender;
-	if (!sender.CreateSender("DmxRasterizer", 1024, 1024)) {
+	if (!sender.CreateSender("DmxRasterizer", RENDER_WIDTH, RENDER_HEIGHT)) {
     std::cerr << "Failed to create Spout sender!" << std::endl;
     return -1;
 	}
 
-	GLuint texture;
+	GLuint texture, framebuffer;
 	glGenTextures(1, &texture);
 	glBindTexture(GL_TEXTURE_2D, texture);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 1024, 1024, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
-
-	GLuint framebuffer;
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, RENDER_WIDTH, RENDER_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
 	glGenFramebuffers(1, &framebuffer);
 	glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture, 0);
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 	while (!glfwWindowShouldClose(window)) {
 		receiveArtNetData(artNetSocket, dmxData);
 
-		for (int i = 0; i < 512; ++i) {
+		for (int i = 0; i < TOTAL_DMX_CHANNELS; ++i) {
 			dmxDataNormalized[i] = dmxData[i] / 255.0f;
 		}
 
+		glBindTexture(GL_TEXTURE_1D, dmxDataTexture);
+		glTexSubImage1D(GL_TEXTURE_1D, 0, 0, TOTAL_DMX_CHANNELS, GL_RED, GL_FLOAT, dmxDataNormalized);
+
 		glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
-    glViewport(0, 0, 1024, 1024); // Match the texture size
 		glClear(GL_COLOR_BUFFER_BIT);
-
-
 		shader.use();
-		int uniformLocation = glGetUniformLocation(shader.ID, "dmxData");
-		if (uniformLocation != -1) {
-			glUniform1fv(uniformLocation, 512, dmxDataNormalized);
-		}
-
 		glBindVertexArray(VAO);
 		glDrawArrays(GL_TRIANGLES, 0, 6);
-		glBindVertexArray(0);
-
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
-		sender.SendTexture(texture, GL_TEXTURE_2D, 1024, 1024);
 
-		glfwSwapBuffers(window);
+		sender.SendTexture(texture, GL_TEXTURE_2D, RENDER_WIDTH, RENDER_HEIGHT);
+
 		glfwPollEvents();
 	}
 
 	sender.ReleaseSender();
 	glDeleteTextures(1, &texture);
+	glDeleteTextures(1, &dmxDataTexture);
 	glDeleteFramebuffers(1, &framebuffer);
-	closesocket(artNetSocket);
-	WSACleanup();
 	glDeleteVertexArrays(1, &VAO);
 	glDeleteBuffers(1, &VBO);
 	glfwTerminate();
+	closesocket(artNetSocket);
+	WSACleanup();
 	return 0;
 }
