@@ -15,10 +15,7 @@ include_directories(${EXTRN}/GLM)
 
 add_library(glad STATIC "${EXTRN}/glad/src/glad.c")
 
-set(SOURCE_FILES
-   	main.cpp
-		shader.cpp
-)
+file(GLOB SOURCE_FILES src/*.cpp) # Grab all .cpp files from src folder
 
 add_executable(${PROJECT_NAME} ${SOURCE_FILES})
 
