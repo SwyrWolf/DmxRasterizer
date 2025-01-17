@@ -1,14 +1,19 @@
+#define WIN32_LEAN_AND_MEAN
+#define NOMINMAX  // Disable Windows min/max macros
+#include <winsock2.h>
+#include <windows.h>
+
 #include <iostream>
+#include <algorithm>
 #include <cstring>
 #include <fstream>
 #include <sstream>
-#include <glad/glad.h>
-#include <glfw3.h>
+
 #include "shader.hpp"
 
-#define NOMINMAX
-#include <winsock2.h>
-#include <windows.h>
+#include <glad/glad.h>
+#include <glfw3.h>
+#include <SpoutGL/SpoutSender.h>
 
 #pragma comment(lib, "Ws2_32.lib")
 
@@ -18,11 +23,8 @@
 
 unsigned char dmxData[512] = {0};
 
-void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
-	glViewport(0, 0, 1440, 64);
-}
 
-SOCKET setupArtNetSocket() {
+SOCKET setupArtNetSocket(int port) {
 	WSADATA wsaData;
 	if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
 		std::cerr << "Failed to initialize Winsock." << std::endl;
@@ -38,7 +40,7 @@ SOCKET setupArtNetSocket() {
 
 	sockaddr_in localAddr{};
 	localAddr.sin_family = AF_INET;
-	localAddr.sin_port = htons(6454); // Change to 6455 if testing another port
+	localAddr.sin_port = htons(port); // Change to 6455 if testing another port
 	localAddr.sin_addr.s_addr = INADDR_ANY;
 
 	int enable = 1;
@@ -64,7 +66,7 @@ SOCKET setupArtNetSocket() {
 		exit(-1);
 	}
 
-	std::cout << "Listening for Art-Net packets on port 6454..." << std::endl;
+	std::cout << "Listening for Art-Net packets on port " << port << "..." << std::endl;
 	return sock;
 }
 
@@ -98,20 +100,36 @@ void receiveArtNetData(SOCKET sock, unsigned char* dmxData) {
 		return;
 	}
 
-	// std::cout << "Received " << bytesReceived << " bytes from " << senderIPNarrow << ":" << ntohs(senderAddr.sin_port) << std::endl;
-
 	if (bytesReceived > 18 && std::strncmp(buffer, "Art-Net", 7) == 0) {
 		uint8_t* dmxStart = (uint8_t*)&buffer[18];
 		std::memcpy(dmxData, dmxStart, std::min(bytesReceived - 18, 512));
 	}
 }
 
-int main() {
+int main(int argc, char* argv[]) {
+	int port = 6454;
+
+	if (argc > 1) {
+		try {
+			port = std::stoi(argv[1]);
+			if (port < 1 || port > 65535) {
+				throw std::out_of_range("Port out of valid range");
+			}
+		} catch (const std::exception& e) {
+			std::cerr << "Invalid port number provided: " << argv[1] << std::endl;
+			std::cerr << "Using default port: " << port << std::endl;
+		}
+	}
+
 	if (!glfwInit()) {
 		std::cerr << "Failed to initialize GLFW" << std::endl;
 		return -1;
 	}
 
+	glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 	GLFWwindow* window = glfwCreateWindow(1440, 64, "DMX Shader Renderer", NULL, NULL);
 	if (!window) {
 		std::cerr << "Failed to create GLFW window" << std::endl;
@@ -125,8 +143,7 @@ int main() {
 		return -1;
 	}
 
-	glViewport(0, 0, 800, 600);
-	glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
+	glViewport(0, 0, 1024, 1024);
 
 	Shader shader("shaders/vertex.glsl", "shaders/frag.glsl");
 	float vertices[] = {
@@ -139,7 +156,7 @@ int main() {
 		 1.0f,  1.0f,  1.0f, 1.0f  // Top-right
 	};
 
-	unsigned int VAO, VBO;
+	GLuint VAO, VBO;
 	glGenVertexArrays(1, &VAO);
 	glGenBuffers(1, &VBO);
 
@@ -157,9 +174,26 @@ int main() {
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	glBindVertexArray(0);
 
-	SOCKET artNetSocket = setupArtNetSocket();
+	SOCKET artNetSocket = setupArtNetSocket(port);
 
-	float dmxDataNormalized[512]; // Normalized DMX data for the first 15 channels
+	float dmxDataNormalized[512] = {0}; // Normalized DMX data for the first 15 channels
+
+	SpoutSender sender;
+	if (!sender.CreateSender("DmxRasterizer", 1024, 1024)) {
+    std::cerr << "Failed to create Spout sender!" << std::endl;
+    return -1;
+	}
+
+	GLuint texture;
+	glGenTextures(1, &texture);
+	glBindTexture(GL_TEXTURE_2D, texture);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 1024, 1024, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+
+	GLuint framebuffer;
+	glGenFramebuffers(1, &framebuffer);
+	glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture, 0);
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 	while (!glfwWindowShouldClose(window)) {
 		receiveArtNetData(artNetSocket, dmxData);
@@ -168,25 +202,31 @@ int main() {
 			dmxDataNormalized[i] = dmxData[i] / 255.0f;
 		}
 
+		glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
+    glViewport(0, 0, 1024, 1024); // Match the texture size
 		glClear(GL_COLOR_BUFFER_BIT);
 
-		shader.use();
 
+		shader.use();
 		int uniformLocation = glGetUniformLocation(shader.ID, "dmxData");
 		if (uniformLocation != -1) {
 			glUniform1fv(uniformLocation, 512, dmxDataNormalized);
-		} else {
-			std::cerr << "ERROR: Uniform 'dmxData' not found in the shader." << std::endl;
 		}
 
 		glBindVertexArray(VAO);
 		glDrawArrays(GL_TRIANGLES, 0, 6);
 		glBindVertexArray(0);
 
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		sender.SendTexture(texture, GL_TEXTURE_2D, 1024, 1024);
+
 		glfwSwapBuffers(window);
 		glfwPollEvents();
 	}
 
+	sender.ReleaseSender();
+	glDeleteTextures(1, &texture);
+	glDeleteFramebuffers(1, &framebuffer);
 	closesocket(artNetSocket);
 	WSACleanup();
 	glDeleteVertexArrays(1, &VAO);

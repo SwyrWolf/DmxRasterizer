@@ -12,6 +12,7 @@ endif()
 include_directories(${EXTRN}/GLAD/include)
 include_directories(${EXTRN}/GLFW/include)
 include_directories(${EXTRN}/GLM)
+include_directories(${EXTRN}/SPOUT/include)
 
 add_library(glad STATIC "${EXTRN}/glad/src/glad.c")
 
@@ -22,5 +23,9 @@ add_executable(${PROJECT_NAME} ${SOURCE_FILES})
 target_link_libraries(
 	${PROJECT_NAME} PRIVATE
 	glad
+	opengl32.lib
+	gdi32.lib
 	"${EXTRN}/GLFW/lib/glfw3.lib"
+	"${EXTRN}/SPOUT/MD/lib/Spout_static.lib"
+	"${EXTRN}/SPOUT/MD/lib/SpoutLibrary.lib"
 )
