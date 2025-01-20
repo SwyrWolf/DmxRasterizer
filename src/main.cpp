@@ -7,14 +7,14 @@
 #include <algorithm>
 #include <cstring>
 #include <fstream>
-#include <sstream>
 #include <cstdint>
+#include <set>
 
 #include "shader.hpp"
 
-#include <glad/glad.h>
-#include <glfw3.h>
-#include <SpoutGL/SpoutSender.h>
+#include "glad/glad.h"
+#include "glfw3.h"
+#include "SpoutGL/SpoutSender.h"
 
 #pragma comment(lib, "Ws2_32.lib")
 
@@ -22,11 +22,11 @@
 #define INET_ADDRSTRLEN 16
 #endif
 
-const uint32_t TOTAL_DMX_CHANNELS = 1560;
-const uint32_t RENDER_WIDTH = 1920;
-const uint32_t RENDER_HEIGHT = 208;
+constexpr uint32_t TOTAL_DMX_CHANNELS = 1560;
+constexpr uint32_t RENDER_WIDTH = 1920;
+constexpr uint32_t RENDER_HEIGHT = 208;
 
-unsigned char dmxData[TOTAL_DMX_CHANNELS] = {0};
+uint8_t dmxData[TOTAL_DMX_CHANNELS] = {0};
 float dmxDataNormalized[TOTAL_DMX_CHANNELS] = {0.0f};
 GLuint dmxDataTexture;
 
@@ -57,7 +57,7 @@ SOCKET setupArtNetSocket(int port) {
 		exit(-1);
 	}
 
-	if (bind(sock, (sockaddr*)&localAddr, sizeof(localAddr)) == SOCKET_ERROR) {
+	if (bind(sock, reinterpret_cast<sockaddr *>(&localAddr), sizeof(localAddr)) == SOCKET_ERROR) {
 		int error = WSAGetLastError();
 		std::cerr << "Failed to bind socket. Error code: " << error << std::endl;
 
@@ -76,56 +76,66 @@ SOCKET setupArtNetSocket(int port) {
 	return sock;
 }
 
-// Function to receive DMX data from Art-Net
-void receiveArtNetData(SOCKET sock, unsigned char* dmxData) {
+void receiveArtNetData(SOCKET sock, uint8_t* dmxData) {
 	char buffer[1024];
-	sockaddr_in senderAddr;
+	sockaddr_in senderAddr{};
 	int senderAddrSize = sizeof(senderAddr);
 
 	int bytesReceived = recvfrom(sock, buffer, sizeof(buffer), 0, (sockaddr*)&senderAddr, &senderAddrSize);
 	if (bytesReceived == SOCKET_ERROR) {
-		int error = WSAGetLastError();
-		std::cerr << "Failed to receive UDP packet. Error: " << error << std::endl;
-		return;
-	}
-
-	wchar_t senderIP[INET_ADDRSTRLEN];
-	DWORD senderIPLen = INET_ADDRSTRLEN;
-
-	sockaddr_in tempAddr = senderAddr;
-	if (WSAAddressToStringW((LPSOCKADDR)&tempAddr, sizeof(tempAddr), NULL, senderIP, &senderIPLen) == SOCKET_ERROR) {
-		std::cerr << "Failed to convert sender address to string. Error: " << WSAGetLastError() << std::endl;
-		return;
-	}
-
-	char senderIPNarrow[INET_ADDRSTRLEN];
-	size_t convertedChars = 0;
-	errno_t err = wcstombs_s(&convertedChars, senderIPNarrow, INET_ADDRSTRLEN, senderIP, _TRUNCATE);
-	if (err != 0) {
-		std::cerr << "Failed to convert wide-character address to multibyte string." << std::endl;
-		return;
+			int error = WSAGetLastError();
+			std::cerr << "Failed to receive UDP packet. Error: " << error << std::endl;
+			return;
 	}
 
 	if (bytesReceived > 18 && std::strncmp(buffer, "Art-Net", 7) == 0) {
-		uint16_t universeID = buffer[14] | (buffer[15] << 8);
-		int universeOffset = (universeID % 2) * 512;
-		uint8_t* dmxStart = (uint8_t*)&buffer[18];
-		std::memcpy(dmxData, dmxStart, std::min(bytesReceived - 18, 512));
+		uint16_t universeID = buffer[14] | (buffer[15] << 8); // Extract the universe ID
+
+		int universeOffset = universeID * 512;
+
+		if (universeOffset + 512 <= TOTAL_DMX_CHANNELS) {
+			const auto dmxStart = reinterpret_cast<uint8_t*>(&buffer[18]);
+			int dmxDataLength = std::min(bytesReceived - 18, 512); // DMX data extracted from ArtNet packet
+
+			std::memcpy(&dmxData[universeOffset], dmxStart, dmxDataLength);
+
+			std::cout << "\rReceived data for Universe " << universeID
+				<< ", Bytes: " << dmxDataLength << std::flush;
+		} else {
+			std::cerr << "Error: Universe ID " << universeID
+			<< " exceeds TOTAL_DMX_CHANNELS. Packet ignored." << std::endl;
+		}
 	}
 }
 
 int main(int argc, char* argv[]) {
+	bool debug = false;
 	int port = 6454;
 
-	if (argc > 1) {
-		try {
-			port = std::stoi(argv[1]);
-			if (port < 1 || port > 65535) {
-				throw std::out_of_range("Port out of valid range");
+	if (argc > 0) {
+		for (int i = 1; i < argc; ++i) {
+			std::string arg = argv[i];
+				
+			if (arg == "-p" || arg == "--port") {
+				if (i + 1 < argc) { // Check if there's an argument after -p/--port
+					try {
+						port = std::stoi(argv[++i]); // Parse the next argument as an integer
+						if (port < 1 || port > 65535) {
+							throw std::out_of_range("Port out of valid range");
+						}
+					} catch (const std::exception& e) {
+						std::cerr << "Invalid port number provided: " << argv[i] << std::endl;
+						std::cerr << "Using default port: " << port << std::endl;
+					}
+				} else {
+					std::cerr << "Error: Missing value for " << arg << " flag." << std::endl;
+					std::cerr << "Using default port: " << port << std::endl;
+				}
+			} else if (arg == "-d" || arg == "--debug") {
+				debug = true;
+			} else {
+				std::cerr << "unkown argument: " << arg << std::endl;
 			}
-		} catch (const std::exception& e) {
-			std::cerr << "Invalid port number provided: " << argv[1] << std::endl;
-			std::cerr << "Using default port: " << port << std::endl;
 		}
 	}
 
@@ -134,11 +144,14 @@ int main(int argc, char* argv[]) {
 		return -1;
 	}
 
-	glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
+
+	if(!debug){
+		glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
+	}
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-	GLFWwindow* window = glfwCreateWindow(RENDER_WIDTH, RENDER_HEIGHT, "DMX Shader Renderer", NULL, NULL);
+	GLFWwindow* window = glfwCreateWindow(RENDER_WIDTH, RENDER_HEIGHT, "DMX Shader Renderer", nullptr, nullptr);
 	if (!window) {
 		std::cerr << "Failed to create GLFW window" << std::endl;
 		glfwTerminate();
@@ -146,7 +159,7 @@ int main(int argc, char* argv[]) {
 	}
 	glfwMakeContextCurrent(window);
 
-	if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
+	if (!gladLoadGLLoader(reinterpret_cast<GLADloadproc>(glfwGetProcAddress))) {
 		std::cerr << "Failed to initialize GLAD" << std::endl;
 		return -1;
 	}
@@ -185,6 +198,7 @@ int main(int argc, char* argv[]) {
 	glEnableVertexAttribArray(1);
 
 	SOCKET artNetSocket = setupArtNetSocket(port);
+	std::unordered_map<uint16_t, unsigned char*> dmxDataMap;
 
 	SpoutSender sender;
 	if (!sender.CreateSender("DmxRasterizer", RENDER_WIDTH, RENDER_HEIGHT)) {

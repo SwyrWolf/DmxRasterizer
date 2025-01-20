@@ -1,7 +1,8 @@
-cmake_minimum_required(VERSION 3.31)
+cmake_minimum_required(VERSION 3.30.5)
 project(DmxRasterizer VERSION 0.1.0)
 
 set(CMAKE_CXX_STANDARD 20)
+set(CCX=clang++)
 
 if(DEFINED ENV{EXTERNAL_CXX_LIBRARIES})
 	file(TO_CMAKE_PATH "$ENV{EXTERNAL_CXX_LIBRARIES}" EXTRN)
