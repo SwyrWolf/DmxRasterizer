@@ -9,99 +9,19 @@
 #include <cstdint>
 #include <set>
 
-#include "shader.hpp"
+#pragma comment(lib, "Ws2_32.lib")
 
 #include "glad/glad.h"
 #include "glfw3.h"
 #include "SpoutGL/SpoutSender.h"
 
-#pragma comment(lib, "Ws2_32.lib")
-
-constexpr uint32_t TOTAL_DMX_CHANNELS = 512 * 4;
-constexpr uint32_t RENDER_WIDTH = 1920;
-constexpr uint32_t RENDER_HEIGHT = 208;
+#include "global.hpp"
+#include "shader.hpp"
+#include "artnet.hpp"
 
 uint8_t dmxData[TOTAL_DMX_CHANNELS] = {0};
 float dmxDataNormalized[TOTAL_DMX_CHANNELS] = {0.0f};
 GLuint dmxDataTexture;
-
-SOCKET setupArtNetSocket(int port) {
-	WSADATA wsaData;
-	if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
-		std::cerr << "Failed to initialize Winsock." << std::endl;
-		exit(-1);
-	}
-
-	SOCKET sock = socket(AF_INET, SOCK_DGRAM, 0);
-	if (sock == INVALID_SOCKET) {
-		std::cerr << "Failed to create socket." << std::endl;
-		WSACleanup();
-		exit(-1);
-	}
-
-	sockaddr_in localAddr{};
-	localAddr.sin_family = AF_INET;
-	localAddr.sin_port = htons(port); // Change to 6455 if testing another port
-	localAddr.sin_addr.s_addr = INADDR_ANY;
-
-	int enable = 1;
-	if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, (const char*)&enable, sizeof(enable)) < 0) {
-		std::cerr << "Failed to set socket options." << std::endl;
-		closesocket(sock);
-		WSACleanup();
-		exit(-1);
-	}
-
-	if (bind(sock, reinterpret_cast<sockaddr *>(&localAddr), sizeof(localAddr)) == SOCKET_ERROR) {
-		int error = WSAGetLastError();
-		std::cerr << "Failed to bind socket. Error code: " << error << std::endl;
-
-		if (error == WSAEADDRINUSE) {
-			std::cerr << "Port 6454 is already in use by another application." << std::endl;
-		} else if (error == WSAEACCES) {
-			std::cerr << "Permission denied. Try running as administrator." << std::endl;
-		}
-
-		closesocket(sock);
-		WSACleanup();
-		exit(-1);
-	}
-
-	std::cout << "Listening for Art-Net packets on port " << port << "..." << std::endl;
-	return sock;
-}
-
-void receiveArtNetData(SOCKET sock, uint8_t* dmxData) {
-	char buffer[1024];
-	sockaddr_in senderAddr{};
-	int senderAddrSize = sizeof(senderAddr);
-
-	int bytesReceived = recvfrom(sock, buffer, sizeof(buffer), 0, (sockaddr*)&senderAddr, &senderAddrSize);
-	if (bytesReceived == SOCKET_ERROR) {
-			int error = WSAGetLastError();
-			std::cerr << "Failed to receive UDP packet. Error: " << error << std::endl;
-			return;
-	}
-
-	if (bytesReceived > 18 && std::strncmp(buffer, "Art-Net", 7) == 0) {
-		uint16_t universeID = buffer[14] | (buffer[15] << 8); // Extract the universe ID
-
-		int universeOffset = universeID * 512;
-
-		if (universeOffset + 512 <= TOTAL_DMX_CHANNELS) {
-			const auto dmxStart = reinterpret_cast<uint8_t*>(&buffer[18]);
-			int dmxDataLength = std::min(bytesReceived - 18, 512); // DMX data extracted from ArtNet packet
-
-			std::memcpy(&dmxData[universeOffset], dmxStart, dmxDataLength);
-
-			std::cout << "\rReceived data for Universe " << universeID
-				<< ", Bytes: " << dmxDataLength << std::flush;
-		} else {
-			std::cerr << "Error: Universe ID " << universeID
-			<< " exceeds TOTAL_DMX_CHANNELS. Packet ignored." << std::endl;
-		}
-	}
-}
 
 int main(int argc, char* argv[]) {
 	bool debug = false;
@@ -193,7 +113,7 @@ int main(int argc, char* argv[]) {
 	glEnableVertexAttribArray(1);
 
 	SOCKET artNetSocket = setupArtNetSocket(port);
-	std::unordered_map<uint16_t, unsigned char*> dmxDataMap;
+	std::unordered_map<uint16_t, std::vector<uint8_t>> dmxDataMap;
 
 	SpoutSender sender;
 	if (!sender.CreateSender("DmxRasterizer", RENDER_WIDTH, RENDER_HEIGHT)) {
@@ -210,7 +130,7 @@ int main(int argc, char* argv[]) {
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture, 0);
 
 	while (!glfwWindowShouldClose(window)) {
-		receiveArtNetData(artNetSocket, dmxData);
+		receiveArtNetData(artNetSocket, dmxDataMap, dmxData);
 
 		for (int i = 0; i < TOTAL_DMX_CHANNELS; ++i) {
 			dmxDataNormalized[i] = dmxData[i] / 255.0f;
