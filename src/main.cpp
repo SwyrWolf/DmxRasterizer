@@ -21,7 +21,7 @@
 #define INET_ADDRSTRLEN 16
 #endif
 
-constexpr uint32_t TOTAL_DMX_CHANNELS = 1560;
+constexpr uint32_t TOTAL_DMX_CHANNELS = 512 * 4;
 constexpr uint32_t RENDER_WIDTH = 1920;
 constexpr uint32_t RENDER_HEIGHT = 208;
 
