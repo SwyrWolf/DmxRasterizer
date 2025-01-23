@@ -77,6 +77,6 @@ void receiveArtNetData(SOCKET sock, std::unordered_map<uint16_t, std::vector<uin
 				}
 
 				std::cout << "\rReceived data for Universe " << universeID
-									<< ", Bytes: " << dmxDataLength << std::flush;
+									<< ", Bytes: " << dmxDataLength << "\033[K" << std::flush;
 		}
 }
