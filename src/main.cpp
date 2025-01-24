@@ -8,6 +8,7 @@
 #include <fstream>
 #include <cstdint>
 #include <set>
+#include <unordered_map>
 
 #pragma comment(lib, "Ws2_32.lib")
 
@@ -23,33 +24,59 @@ uint8_t dmxData[TOTAL_DMX_CHANNELS] = {0};
 float dmxDataNormalized[TOTAL_DMX_CHANNELS] = {0.0f};
 GLuint dmxDataTexture;
 
+auto RENDER_HEIGHT = H_RENDER_HEIGHT;
+auto RENDER_WIDTH = H_RENDER_WIDTH;
+
 int main(int argc, char* argv[]) {
 	bool debug = false;
+	bool vertical = false;
 	int port = 6454;
+	
+	enum ArgType { PORT, DEBUG, VERTICAL, UNKNOWN };
+	std::unordered_map<std::string, ArgType> argMap = {
+		{"-p", PORT},
+		{"--port", PORT},
+		{"-d", DEBUG},
+		{"--debug", DEBUG},
+		{"-v", VERTICAL}
+	};
 
-	if (argc > 0) {
+	if (argc > 1) {
 		for (int i = 1; i < argc; ++i) {
 			std::string arg = argv[i];
-				
-			if (arg == "-p" || arg == "--port") {
-				if (i + 1 < argc) { // Check if there's an argument after -p/--port
-					try {
-						port = std::stoi(argv[++i]); // Parse the next argument as an integer
-						if (port < 1 || port > 65535) {
-							throw std::out_of_range("Port out of valid range");
+
+			auto theArg = argMap.find(arg);
+			ArgType argType = (theArg != argMap.end()) ? theArg->second : UNKNOWN;
+
+			switch (argType) {
+				case PORT:
+					if (i + 1 < argc) {
+						try {
+							port = std::stoi(argv[++i]);
+							if (port < 1 || port > 65535) {
+								throw std::out_of_range("Port out of valid range");
+							}
+						} catch (const std::exception& e) {
+							std::cerr << "Error: Missing value for " << arg << " flag." << std::endl;
+							std::cerr << "using default port: " << port << std::endl;
 						}
-					} catch (const std::exception& e) {
-						std::cerr << "Invalid port number provided: " << argv[i] << std::endl;
-						std::cerr << "Using default port: " << port << std::endl;
+						break;
 					}
-				} else {
-					std::cerr << "Error: Missing value for " << arg << " flag." << std::endl;
-					std::cerr << "Using default port: " << port << std::endl;
-				}
-			} else if (arg == "-d" || arg == "--debug") {
-				debug = true;
-			} else {
-				std::cerr << "unkown argument: " << arg << std::endl;
+
+				case DEBUG:
+					debug = true;
+					break;
+
+				case VERTICAL:
+					vertical = true;
+					RENDER_HEIGHT = V_RENDER_HEIGHT;
+					RENDER_WIDTH = V_RENDER_WIDTH;
+					break;
+
+				case UNKNOWN:
+				default:
+					std::cerr << "Unkown argument: " << arg << std::endl;
+					break;
 			}
 		}
 	}

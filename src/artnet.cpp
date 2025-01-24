@@ -60,7 +60,7 @@ void receiveArtNetData(SOCKET sock, std::unordered_map<uint16_t, std::vector<uin
 	}
 
 	if (bytesReceived > 18 && std::strncmp(buffer, "Art-Net", 7) == 0) {
-				uint16_t universeID = buffer[14] | (buffer[15] << 8); // Extract the universe ID
+				uint16_t universeID = buffer[14] | (buffer[15] << 8);
 
 				const auto dmxStart = reinterpret_cast<uint8_t*>(&buffer[18]);
 				int dmxDataLength = std::min(bytesReceived - 18, static_cast<int>(DMX_UNIVERSE_SIZE));
