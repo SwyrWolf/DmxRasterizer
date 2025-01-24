@@ -20,8 +20,8 @@
 #include "shader.hpp"
 #include "artnet.hpp"
 
-uint8_t dmxData[TOTAL_DMX_CHANNELS] = {0};
-float dmxDataNormalized[TOTAL_DMX_CHANNELS] = {0.0f};
+uint8_t dmxData[ArtNet::TOTAL_DMX_CHANNELS] = {0};
+float dmxDataNormalized[ArtNet::TOTAL_DMX_CHANNELS] = {0.0f};
 GLuint dmxDataTexture;
 
 auto RENDER_HEIGHT = H_RENDER_HEIGHT;
@@ -110,7 +110,7 @@ int main(int argc, char* argv[]) {
 
 	glGenTextures(1, &dmxDataTexture);
 	glBindTexture(GL_TEXTURE_1D, dmxDataTexture);
-	glTexImage1D(GL_TEXTURE_1D, 0, GL_R32F, TOTAL_DMX_CHANNELS, 0, GL_RED, GL_FLOAT, dmxDataNormalized);
+	glTexImage1D(GL_TEXTURE_1D, 0, GL_R32F, ArtNet::TOTAL_DMX_CHANNELS, 0, GL_RED, GL_FLOAT, dmxDataNormalized);
 	glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
@@ -159,12 +159,12 @@ int main(int argc, char* argv[]) {
 	while (!glfwWindowShouldClose(window)) {
 		receiveArtNetData(artNetSocket, dmxDataMap, dmxData);
 
-		for (int i = 0; i < TOTAL_DMX_CHANNELS; ++i) {
+		for (int i = 0; i < ArtNet::TOTAL_DMX_CHANNELS; ++i) {
 			dmxDataNormalized[i] = dmxData[i] / 255.0f;
 		}
 
 		glBindTexture(GL_TEXTURE_1D, dmxDataTexture);
-		glTexSubImage1D(GL_TEXTURE_1D, 0, 0, TOTAL_DMX_CHANNELS, GL_RED, GL_FLOAT, dmxDataNormalized);
+		glTexSubImage1D(GL_TEXTURE_1D, 0, 0, ArtNet::TOTAL_DMX_CHANNELS, GL_RED, GL_FLOAT, dmxDataNormalized);
 
 		glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
 		glClear(GL_COLOR_BUFFER_BIT);

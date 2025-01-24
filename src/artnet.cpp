@@ -1,6 +1,24 @@
 #include "artnet.hpp"
 #include "global.hpp"
 
+namespace ArtNet {
+	void Universe::SetActive() {
+		if (!active) {
+			std::cout << "Activating Universe." << std::endl;
+			active = true;
+		}
+	}
+	void Universe::SetInactive() {
+		if (active) {
+			std::cout << "Deactivating Universe." << std::endl;
+			active = false;
+		}
+	}
+	bool Universe::IsActive() const {
+		return active;
+	}
+}
+
 SOCKET setupArtNetSocket(int port) {
 	WSADATA wsaData;
 	if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
@@ -63,16 +81,16 @@ void receiveArtNetData(SOCKET sock, std::unordered_map<uint16_t, std::vector<uin
 				uint16_t universeID = buffer[14] | (buffer[15] << 8);
 
 				const auto dmxStart = reinterpret_cast<uint8_t*>(&buffer[18]);
-				int dmxDataLength = std::min(bytesReceived - 18, static_cast<int>(DMX_UNIVERSE_SIZE));
+				int dmxDataLength = std::min(bytesReceived - 18, static_cast<int>(ArtNet::DMX_UNIVERSE_SIZE));
 
 				if (dmxDataMap.find(universeID) == dmxDataMap.end()) {
-						dmxDataMap[universeID] = std::vector<uint8_t>(DMX_UNIVERSE_SIZE, 0);
+						dmxDataMap[universeID] = std::vector<uint8_t>(ArtNet::DMX_UNIVERSE_SIZE, 0);
 				}
 
 				std::memcpy(dmxDataMap[universeID].data(), dmxStart, dmxDataLength);
 
-				int universeOffset = universeID * DMX_UNIVERSE_SIZE;
-				if (universeOffset + dmxDataLength <= TOTAL_DMX_CHANNELS) {
+				int universeOffset = universeID * ArtNet::DMX_UNIVERSE_SIZE;
+				if (universeOffset + dmxDataLength <= ArtNet::TOTAL_DMX_CHANNELS) {
 						std::memcpy(&dmxData[universeOffset], dmxStart, dmxDataLength);
 				}
 
