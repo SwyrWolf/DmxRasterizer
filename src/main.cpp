@@ -28,6 +28,8 @@ auto RENDER_HEIGHT = H_RENDER_HEIGHT;
 auto RENDER_WIDTH = H_RENDER_WIDTH;
 
 int main(int argc, char* argv[]) {
+	ArtNet::UniverseLogger dmxLogger;
+
 	bool debug = false;
 	bool vertical = false;
 	int port = 6454;
@@ -157,7 +159,7 @@ int main(int argc, char* argv[]) {
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture, 0);
 
 	while (!glfwWindowShouldClose(window)) {
-		receiveArtNetData(artNetSocket, dmxDataMap, dmxData);
+		receiveArtNetData(artNetSocket, dmxDataMap, dmxData, dmxLogger);
 
 		for (int i = 0; i < ArtNet::TOTAL_DMX_CHANNELS; ++i) {
 			dmxDataNormalized[i] = dmxData[i] / 255.0f;
