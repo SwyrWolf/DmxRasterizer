@@ -7,7 +7,8 @@ uniform vec2 resolution;          // Screen resolution
 
 void main() {
 	vec2 blockSize = vec2(16.0, 16.0);
-	ivec2 blockCoord = ivec2(gl_FragCoord.xy / blockSize);
+	ivec2 blockCoord = ivec2(gl_FragCoord.x / blockSize.x, (resolution.y - gl_FragCoord.y) / blockSize.y);
+	
 	int blockIndex = blockCoord.x + blockCoord.y * int(resolution.x / blockSize.x);
 	blockIndex = clamp(blockIndex, 0, 1559);
 	float brightness = texture(dmxDataTexture, float(blockIndex) / 1560.0).r;
