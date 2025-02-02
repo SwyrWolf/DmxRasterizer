@@ -165,18 +165,41 @@ int main(int argc, char* argv[]) {
 			dmxDataNormalized[i] = dmxData[i] / 255.0f;
 		}
 
+		// Update the DMX data into texture
 		glBindTexture(GL_TEXTURE_1D, dmxDataTexture);
 		glTexSubImage1D(GL_TEXTURE_1D, 0, 0, ArtNet::TOTAL_DMX_CHANNELS, GL_RED, GL_FLOAT, dmxDataNormalized);
 
+		// Rendering
 		glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
+		glViewport(0, 0, RENDER_WIDTH, RENDER_HEIGHT);
 		glClear(GL_COLOR_BUFFER_BIT);
+
 		shader.use();
 		glBindVertexArray(VAO);
-		glDrawArrays(GL_TRIANGLES, 0, 6);
-		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_1D, dmxDataTexture);
+		glUniform1i(glGetUniformLocation(shader.ID, "dmxDataTexture"), 0);
+
+		glDrawArrays(GL_TRIANGLES, 0, 6);
 		sender.SendTexture(texture, GL_TEXTURE_2D, RENDER_WIDTH, RENDER_HEIGHT);
 
+    if (debug) {
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        glViewport(0, 0, RENDER_WIDTH, RENDER_HEIGHT);
+        glClear(GL_COLOR_BUFFER_BIT);
+
+        shader.use();
+        glBindVertexArray(VAO);
+
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_1D, dmxDataTexture);
+        glUniform1i(glGetUniformLocation(shader.ID, "dmxDataTexture"), 0);
+
+        glDrawArrays(GL_TRIANGLES, 0, 6);
+
+        glfwSwapBuffers(window);  // Display the rendered image
+    }
 		glfwPollEvents();
 	}
 
