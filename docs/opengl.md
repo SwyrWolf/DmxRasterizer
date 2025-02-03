@@ -1,3 +1,14 @@
+# OpenGL docs
+
+// 
+## Main.cpp
+```cpp
+glBindTexture(GL_TEXTURE_1D, dmxDataTexture);
+glTexSubImage1D(GL_TEXTURE_1D, 0, 0, ArtNet::TOTAL_DMX_CHANNELS, GL_RED, GL_FLOAT, dmxDataNormalized);
+```
+
+## frag.glsl
+```cpp
 #version 330 core
 
 out vec4 FragColor;
@@ -14,3 +25,11 @@ void main() {
 	float brightness = texture(dmxDataTexture, float(blockIndex) / 1560.0).r;
 	FragColor = vec4(brightness, brightness, brightness, 1.0);
 }
+```
+
+## glad.h
+```c
+#define GL_TEXTURE_1D 0x0DE0 // 36227
+```
+
+https://registry.khronos.org/OpenGL-Refpages/gl4/html/glTexImage1D.xhtml

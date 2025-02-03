@@ -11,9 +11,13 @@
 
 #include <winsock2.h>
 
+// DMX's full name is DMX512
+// VRSL only supports 3 universes skipping 8 channels per universe
+
 namespace ArtNet {
-	constexpr uint32_t TOTAL_DMX_CHANNELS = 512 * 4;
-	constexpr uint16_t DMX_UNIVERSE_SIZE = 512;
+	constexpr int DMX_UNIVERSE_SIZE = 512;
+	constexpr int VRSL_UNIVERSE_GRID = (DMX_UNIVERSE_SIZE + 8);
+	constexpr int TOTAL_DMX_CHANNELS = VRSL_UNIVERSE_GRID * 3;
 
 	class Universe {
 		private:

@@ -93,17 +93,17 @@ void receiveArtNetData(SOCKET sock, std::unordered_map<uint16_t, std::vector<uin
 		uint16_t universeID = buffer[14] | (buffer[15] << 8);
 
 		int dmxDataLength = 0;
-		if (universeID < 4) {
+		if (universeID < 3) {
 			const auto dmxStart = reinterpret_cast<uint8_t*>(&buffer[18]);
-			dmxDataLength = std::min(bytesReceived - 18, static_cast<int>(ArtNet::DMX_UNIVERSE_SIZE));
+			dmxDataLength = std::min(bytesReceived - 18, static_cast<int>(ArtNet::VRSL_UNIVERSE_GRID));
 
 			if (dmxDataMap.find(universeID) == dmxDataMap.end()) {
-					dmxDataMap[universeID] = std::vector<uint8_t>(ArtNet::DMX_UNIVERSE_SIZE, 0);
+					dmxDataMap[universeID] = std::vector<uint8_t>(ArtNet::VRSL_UNIVERSE_GRID, 0);
 			}
 
 			std::memcpy(dmxDataMap[universeID].data(), dmxStart, dmxDataLength);
 
-			int universeOffset = universeID * ArtNet::DMX_UNIVERSE_SIZE;
+			int universeOffset = universeID * ArtNet::VRSL_UNIVERSE_GRID - 1;
 			if (universeOffset + dmxDataLength <= ArtNet::TOTAL_DMX_CHANNELS) {
 					std::memcpy(&dmxData[universeOffset], dmxStart, dmxDataLength);
 			}
