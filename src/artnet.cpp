@@ -67,41 +67,43 @@ SOCKET setupArtNetSocket(int port) {
 }
 
 void receiveArtNetData(SOCKET sock, std::array<uint8_t, ArtNet::TOTAL_DMX_CHANNELS>& dmxData, ArtNet::UniverseLogger& logger) {
-	char buffer[1024];
-	sockaddr_in senderAddr{};
-	int senderAddrSize = sizeof(senderAddr);
+	while (true) {
+		char buffer[1024];
+		sockaddr_in senderAddr{};
+		int senderAddrSize = sizeof(senderAddr);
 
-	int bytesReceived = recvfrom(sock, buffer, sizeof(buffer), 0, (sockaddr*)&senderAddr, &senderAddrSize);
-	if (bytesReceived == SOCKET_ERROR) {
-			int error = WSAGetLastError();
-			std::cerr << "Failed to receive UDP packet. Error: " << error << std::endl;
-			return;
-	}
-	
-	if (bytesReceived > 18 && std::strncmp(buffer, "Art-Net", 7) == 0) {
-		uint16_t universeID = buffer[14] | (buffer[15] << 8);
+		int bytesReceived = recvfrom(sock, buffer, sizeof(buffer), 0, (sockaddr*)&senderAddr, &senderAddrSize);
+		if (bytesReceived == SOCKET_ERROR) {
+				int error = WSAGetLastError();
+				std::cerr << "Failed to receive UDP packet. Error: " << error << std::endl;
+				return;
+		}
+		
+		if (bytesReceived > 18 && std::strncmp(buffer, "Art-Net", 7) == 0) {
+			uint16_t universeID = buffer[14] | (buffer[15] << 8);
 
-		int dmxDataLength = 0;
-		if (universeID < 3) {
-			const auto dmxStart = reinterpret_cast<uint8_t*>(&buffer[18]);
-			dmxDataLength = std::min(bytesReceived - 18, static_cast<int>(ArtNet::VRSL_UNIVERSE_GRID));
+			int dmxDataLength = 0;
+			if (universeID < 3) {
+				const auto dmxStart = reinterpret_cast<uint8_t*>(&buffer[18]);
+				dmxDataLength = std::min(bytesReceived - 18, static_cast<int>(ArtNet::VRSL_UNIVERSE_GRID));
 
-			int universeOffset = universeID * ArtNet::VRSL_UNIVERSE_GRID - 1;
-			if (universeOffset + dmxDataLength <= ArtNet::TOTAL_DMX_CHANNELS) {
-					std::memcpy(&dmxData[universeOffset], dmxStart, dmxDataLength);
+				int universeOffset = universeID * ArtNet::VRSL_UNIVERSE_GRID - 1;
+				if (universeOffset + dmxDataLength <= ArtNet::TOTAL_DMX_CHANNELS) {
+						std::memcpy(&dmxData[universeOffset], dmxStart, dmxDataLength);
+				}
+
+				logger.MeasureTimeDelta(universeID);
 			}
 
-			logger.MeasureTimeDelta(universeID);
+			std::cout << "Received Data:\n";
+			auto deltas = logger.GetTimeDeltasMs();
+
+			for (size_t i = 0; i < deltas.size(); ++i) {
+				std::cout << "\r\033[K";
+				std::cout << "-> Universe " << i << ": " << deltas[i] << "ms\n";
+			}
+
+			std::cout << "\033[" << (deltas.size() + 1) << "A" << std::flush;
 		}
-
-		std::cout << "Received Data:\n";
-		auto deltas = logger.GetTimeDeltasMs();
-
-		for (size_t i = 0; i < deltas.size(); ++i) {
-			std::cout << "\r\033[K";
-			std::cout << "-> Universe " << i << ": " << deltas[i] << "ms\n";
-		}
-
-		std::cout << "\033[" << (deltas.size() + 1) << "A" << std::flush;
 	}
 }

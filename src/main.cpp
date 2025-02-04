@@ -11,6 +11,7 @@
 #include <set>
 #include <unordered_map>
 #include <thread>
+#include <atomic>
 
 #pragma comment(lib, "Ws2_32.lib")
 
@@ -22,6 +23,9 @@
 #include "shader.hpp"
 #include "artnet.hpp"
 
+constexpr int FPS_LIMIT = 30;
+constexpr double FRAME_TIME = 1.0 / FPS_LIMIT;
+
 std::array<uint8_t, ArtNet::TOTAL_DMX_CHANNELS> dmxData{};
 float dmxDataNormalized[ArtNet::TOTAL_DMX_CHANNELS] = {0.0f};
 GLuint dmxDataTexture;
@@ -29,10 +33,78 @@ GLuint dmxDataTexture;
 auto RENDER_HEIGHT = H_RENDER_HEIGHT;
 auto RENDER_WIDTH = H_RENDER_WIDTH;
 
+bool debug = false;
+std::atomic<bool> TH_Render = true;
+
+void renderLoop(GLFWwindow* window, Shader& shader, GLuint VAO, GLuint dmxDataTexture, SpoutSender& sender, GLuint framebuffer, GLuint texture) {
+
+	glfwMakeContextCurrent(window);
+
+	using clock = std::chrono::steady_clock;
+	auto lastFrameTime = clock::now();
+
+	while (TH_Render) {
+		auto frameStart = clock::now();
+
+		for (int i = 0; i < ArtNet::TOTAL_DMX_CHANNELS; ++i) {
+			dmxDataNormalized[i] = dmxData[i] / 255.0f;
+		}
+
+		// Update the DMX data into texture
+		glBindTexture(GL_TEXTURE_1D, dmxDataTexture);
+		glTexSubImage1D(GL_TEXTURE_1D, 0, 0, ArtNet::TOTAL_DMX_CHANNELS, GL_RED, GL_FLOAT, dmxDataNormalized);
+
+		// Rendering
+		glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
+		glViewport(0, 0, RENDER_WIDTH, RENDER_HEIGHT);
+		glClear(GL_COLOR_BUFFER_BIT);
+
+		shader.use();
+		glBindVertexArray(VAO);
+
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_1D, dmxDataTexture);
+		glUniform1i(glGetUniformLocation(shader.ID, "dmxDataTexture"), 0);
+
+		glDrawArrays(GL_TRIANGLES, 0, 6);
+		sender.SendTexture(texture, GL_TEXTURE_2D, RENDER_WIDTH, RENDER_HEIGHT);
+
+    if (debug) {
+			glBindFramebuffer(GL_FRAMEBUFFER, 0);
+			glViewport(0, 0, RENDER_WIDTH, RENDER_HEIGHT);
+			glClear(GL_COLOR_BUFFER_BIT);
+
+			shader.use();
+			glBindVertexArray(VAO);
+
+			glActiveTexture(GL_TEXTURE0);
+			glBindTexture(GL_TEXTURE_1D, dmxDataTexture);
+			glUniform1i(glGetUniformLocation(shader.ID, "dmxDataTexture"), 0);
+
+			glDrawArrays(GL_TRIANGLES, 0, 6);
+
+			glfwSwapBuffers(window);  // Display the rendered image
+    }
+
+		auto frameEnd = clock::now();
+		std::chrono::duration<double> elapsedTime = frameEnd - frameStart;
+		double sleepTime = FRAME_TIME - elapsedTime.count();
+
+		if (sleepTime > 0) {
+			std::this_thread::sleep_for(std::chrono::duration<double>(sleepTime));
+		}
+	}
+	glfwMakeContextCurrent(nullptr);
+	glDeleteTextures(1, &texture);
+	glDeleteTextures(1, &dmxDataTexture);
+	glDeleteFramebuffers(1, &framebuffer);
+	glDeleteVertexArrays(1, &VAO);
+	sender.ReleaseSender();
+}
+
 int main(int argc, char* argv[]) {
 	ArtNet::UniverseLogger dmxLogger;
 
-	bool debug = false;
 	bool vertical = false;
 	int port = 6454;
 	
@@ -144,6 +216,7 @@ int main(int argc, char* argv[]) {
 	glEnableVertexAttribArray(1);
 
 	SOCKET artNetSocket = setupArtNetSocket(port);
+	std::thread artNetThread(receiveArtNetData, artNetSocket, std::ref(dmxData), std::ref(dmxLogger));
 
 	SpoutSender sender;
 	if (!sender.CreateSender("DmxRasterizer", RENDER_WIDTH, RENDER_HEIGHT)) {
@@ -159,56 +232,18 @@ int main(int argc, char* argv[]) {
 	glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture, 0);
 
+	glfwMakeContextCurrent(nullptr);
+	std::thread renderThread(renderLoop, window, std::ref(shader), VAO, dmxDataTexture, std::ref(sender), framebuffer, texture);
+
 	while (!glfwWindowShouldClose(window)) {
-		receiveArtNetData(artNetSocket, dmxData, dmxLogger);
-
-		for (int i = 0; i < ArtNet::TOTAL_DMX_CHANNELS; ++i) {
-			dmxDataNormalized[i] = dmxData[i] / 255.0f;
-		}
-
-		// Update the DMX data into texture
-		glBindTexture(GL_TEXTURE_1D, dmxDataTexture);
-		glTexSubImage1D(GL_TEXTURE_1D, 0, 0, ArtNet::TOTAL_DMX_CHANNELS, GL_RED, GL_FLOAT, dmxDataNormalized);
-
-		// Rendering
-		glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
-		glViewport(0, 0, RENDER_WIDTH, RENDER_HEIGHT);
-		glClear(GL_COLOR_BUFFER_BIT);
-
-		shader.use();
-		glBindVertexArray(VAO);
-
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_1D, dmxDataTexture);
-		glUniform1i(glGetUniformLocation(shader.ID, "dmxDataTexture"), 0);
-
-		glDrawArrays(GL_TRIANGLES, 0, 6);
-		sender.SendTexture(texture, GL_TEXTURE_2D, RENDER_WIDTH, RENDER_HEIGHT);
-
-    if (debug) {
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
-        glViewport(0, 0, RENDER_WIDTH, RENDER_HEIGHT);
-        glClear(GL_COLOR_BUFFER_BIT);
-
-        shader.use();
-        glBindVertexArray(VAO);
-
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_1D, dmxDataTexture);
-        glUniform1i(glGetUniformLocation(shader.ID, "dmxDataTexture"), 0);
-
-        glDrawArrays(GL_TRIANGLES, 0, 6);
-
-        glfwSwapBuffers(window);  // Display the rendered image
-    }
 		glfwPollEvents();
 	}
 
-	sender.ReleaseSender();
-	glDeleteTextures(1, &texture);
-	glDeleteTextures(1, &dmxDataTexture);
-	glDeleteFramebuffers(1, &framebuffer);
-	glDeleteVertexArrays(1, &VAO);
+	TH_Render = false;
+	if (renderThread.joinable()) {
+		renderThread.join();
+	}
+
 	glDeleteBuffers(1, &VBO);
 	glfwTerminate();
 	closesocket(artNetSocket);
