@@ -4,9 +4,8 @@
 
 #include <iostream>
 #include <cstdint>
-#include <unordered_map>
-#include <optional>
-#include <vector>
+#include <array>
+#include <ranges>
 #include <chrono>
 
 #include <winsock2.h>
@@ -16,30 +15,20 @@
 
 namespace ArtNet {
 	constexpr int DMX_UNIVERSE_SIZE = 512;
+	constexpr int VRSL_MAX_UNIVERSES = 3;
 	constexpr int VRSL_UNIVERSE_GRID = (DMX_UNIVERSE_SIZE + 8);
-	constexpr int TOTAL_DMX_CHANNELS = VRSL_UNIVERSE_GRID * 3;
-
-	class Universe {
-		private:
- 
-			bool active = false;
-
-		public:
-			void SetActive();
-			void SetInactive();
-			bool IsActive() const;
-	};
+	constexpr int TOTAL_DMX_CHANNELS = VRSL_UNIVERSE_GRID * VRSL_MAX_UNIVERSES;
 
 	class UniverseLogger {
 	private:
-		std::unordered_map<uint16_t, std::chrono::steady_clock::time_point> networkTimeRecord;
-		std::unordered_map<uint16_t, std::chrono::duration<double>> networkTimeDelta;
+		std::array<std::chrono::steady_clock::time_point, VRSL_MAX_UNIVERSES> networkTimeRecord = {};
+		std::array<std::chrono::duration<double>, VRSL_MAX_UNIVERSES> networkTimeDelta = {};
 
 	public:
-		void MeasureTimeDelta(uint16_t universeID);
-		std::unordered_map<uint16_t, double> GetTimeDeltasMs() const;
+		void MeasureTimeDelta(uint8_t universeID);
+		auto GetTimeDeltasMs() const;
 	};
 }
 
 SOCKET setupArtNetSocket(int port);
-void receiveArtNetData(SOCKET sock, std::unordered_map<uint16_t, std::vector<uint8_t>>& dmxDataMap, uint8_t* dmxData, ArtNet::UniverseLogger& logger);
+void receiveArtNetData(SOCKET sock, std::array<uint8_t, ArtNet::TOTAL_DMX_CHANNELS>& dmxData, ArtNet::UniverseLogger& logger);

@@ -4,11 +4,13 @@
 
 #include <iostream>
 #include <algorithm>
+#include <array>
 #include <cstring>
 #include <fstream>
 #include <cstdint>
 #include <set>
 #include <unordered_map>
+#include <thread>
 
 #pragma comment(lib, "Ws2_32.lib")
 
@@ -20,7 +22,7 @@
 #include "shader.hpp"
 #include "artnet.hpp"
 
-uint8_t dmxData[ArtNet::TOTAL_DMX_CHANNELS] = {0};
+std::array<uint8_t, ArtNet::TOTAL_DMX_CHANNELS> dmxData{};
 float dmxDataNormalized[ArtNet::TOTAL_DMX_CHANNELS] = {0.0f};
 GLuint dmxDataTexture;
 
@@ -142,7 +144,6 @@ int main(int argc, char* argv[]) {
 	glEnableVertexAttribArray(1);
 
 	SOCKET artNetSocket = setupArtNetSocket(port);
-	std::unordered_map<uint16_t, std::vector<uint8_t>> dmxDataMap;
 
 	SpoutSender sender;
 	if (!sender.CreateSender("DmxRasterizer", RENDER_WIDTH, RENDER_HEIGHT)) {
@@ -159,7 +160,7 @@ int main(int argc, char* argv[]) {
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture, 0);
 
 	while (!glfwWindowShouldClose(window)) {
-		receiveArtNetData(artNetSocket, dmxDataMap, dmxData, dmxLogger);
+		receiveArtNetData(artNetSocket, dmxData, dmxLogger);
 
 		for (int i = 0; i < ArtNet::TOTAL_DMX_CHANNELS; ++i) {
 			dmxDataNormalized[i] = dmxData[i] / 255.0f;

@@ -2,31 +2,20 @@
 #include "global.hpp"
 
 namespace ArtNet {
-	void Universe::SetActive() {
-		if (!active) { active = true; }
-	}
-	void Universe::SetInactive() {
-		if (active) { active = false; }
-	}
-	bool Universe::IsActive() const { return active; }
 
-	void UniverseLogger::MeasureTimeDelta(uint16_t universeID) {
+	void UniverseLogger::MeasureTimeDelta(uint8_t universeID) {
 		auto now = std::chrono::steady_clock::now();
-		if (networkTimeRecord.find(universeID) != networkTimeRecord.end()) {
-			networkTimeDelta[universeID] = now - networkTimeRecord.at(universeID);
-		} else {
-			networkTimeDelta[universeID] = std::chrono::duration<double>::zero();
-		}
 
+		if (networkTimeRecord[universeID].time_since_epoch().count() == 0) {
+			networkTimeDelta[universeID] = std::chrono::duration<double>::zero();
+		} else {
+			networkTimeDelta[universeID] = now - networkTimeRecord[universeID];
+		}
 		networkTimeRecord[universeID] = now;
 	}
 
-	std::unordered_map<uint16_t, double> UniverseLogger::GetTimeDeltasMs() const {
-		std::unordered_map<uint16_t, double> deltas;
-		for (const auto& [id, delta] : networkTimeDelta) {
-			deltas[id] = delta.count() * 1000;
-		}
-		return deltas;
+	auto UniverseLogger::GetTimeDeltasMs() const {
+		return networkTimeDelta | std::views::transform([](auto d) { return d.count() * 1000; });
 	}
 
 }
@@ -77,7 +66,7 @@ SOCKET setupArtNetSocket(int port) {
 	return sock;
 }
 
-void receiveArtNetData(SOCKET sock, std::unordered_map<uint16_t, std::vector<uint8_t>>& dmxDataMap, uint8_t* dmxData, ArtNet::UniverseLogger& logger) {
+void receiveArtNetData(SOCKET sock, std::array<uint8_t, ArtNet::TOTAL_DMX_CHANNELS>& dmxData, ArtNet::UniverseLogger& logger) {
 	char buffer[1024];
 	sockaddr_in senderAddr{};
 	int senderAddrSize = sizeof(senderAddr);
@@ -97,12 +86,6 @@ void receiveArtNetData(SOCKET sock, std::unordered_map<uint16_t, std::vector<uin
 			const auto dmxStart = reinterpret_cast<uint8_t*>(&buffer[18]);
 			dmxDataLength = std::min(bytesReceived - 18, static_cast<int>(ArtNet::VRSL_UNIVERSE_GRID));
 
-			if (dmxDataMap.find(universeID) == dmxDataMap.end()) {
-					dmxDataMap[universeID] = std::vector<uint8_t>(ArtNet::VRSL_UNIVERSE_GRID, 0);
-			}
-
-			std::memcpy(dmxDataMap[universeID].data(), dmxStart, dmxDataLength);
-
 			int universeOffset = universeID * ArtNet::VRSL_UNIVERSE_GRID - 1;
 			if (universeOffset + dmxDataLength <= ArtNet::TOTAL_DMX_CHANNELS) {
 					std::memcpy(&dmxData[universeOffset], dmxStart, dmxDataLength);
@@ -113,8 +96,10 @@ void receiveArtNetData(SOCKET sock, std::unordered_map<uint16_t, std::vector<uin
 
 		std::cout << "Received Data:\n";
 		auto deltas = logger.GetTimeDeltasMs();
-		for (const auto& [id, deltaMs] : deltas) {
-			std::cout << "-> Universe " << id << ": " << deltaMs << "ms\n";
+
+		for (size_t i = 0; i < deltas.size(); ++i) {
+			std::cout << "\r\033[K";
+			std::cout << "-> Universe " << i << ": " << deltas[i] << "ms\n";
 		}
 
 		std::cout << "\033[" << (deltas.size() + 1) << "A" << std::flush;
