@@ -216,7 +216,7 @@ int main(int argc, char* argv[]) {
 	glEnableVertexAttribArray(1);
 
 	SOCKET artNetSocket = setupArtNetSocket(port);
-	std::thread artNetThread(receiveArtNetData, artNetSocket, std::ref(dmxData), std::ref(dmxLogger));
+	std::jthread artNetThread(receiveArtNetData, artNetSocket, std::ref(dmxData), std::ref(dmxLogger));
 
 	SpoutSender sender;
 	if (!sender.CreateSender("DmxRasterizer", RENDER_WIDTH, RENDER_HEIGHT)) {
@@ -233,17 +233,14 @@ int main(int argc, char* argv[]) {
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture, 0);
 
 	glfwMakeContextCurrent(nullptr);
-	std::thread renderThread(renderLoop, window, std::ref(shader), VAO, dmxDataTexture, std::ref(sender), framebuffer, texture);
+	std::jthread renderThread(renderLoop, window, std::ref(shader), VAO, dmxDataTexture, std::ref(sender), framebuffer, texture);
 
 	while (!glfwWindowShouldClose(window)) {
 		glfwPollEvents();
 	}
 
 	TH_Render = false;
-	if (renderThread.joinable()) {
-		renderThread.join();
-	}
-
+	
 	glDeleteBuffers(1, &VBO);
 	glfwTerminate();
 	closesocket(artNetSocket);

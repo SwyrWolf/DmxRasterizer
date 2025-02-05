@@ -26,7 +26,7 @@ namespace ArtNet {
 
 	public:
 		void MeasureTimeDelta(uint8_t universeID);
-		auto GetTimeDeltasMs() const;
+		auto GetTimeDeltasMs();
 	};
 }
 

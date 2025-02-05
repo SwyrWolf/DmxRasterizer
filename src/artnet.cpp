@@ -14,8 +14,9 @@ namespace ArtNet {
 		networkTimeRecord[universeID] = now;
 	}
 
-	auto UniverseLogger::GetTimeDeltasMs() const {
-		return networkTimeDelta | std::views::transform([](auto d) { return d.count() * 1000; });
+	auto UniverseLogger::GetTimeDeltasMs() {
+		 return networkTimeDelta 
+		 	| std::views::transform([](const auto& i) { return i.count() * 1000; });
 	}
 
 }
