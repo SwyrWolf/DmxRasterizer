@@ -9,7 +9,7 @@
 - Envrionment Variable: `EXTERNAL_CXX_LIBRARIES` needs to be created and pointed at your root folder that contains GLM / GLFW folders.
 
 ## Build commands (From project root directory)
-- `cmake -G Ninja -B ./build`
+- `cmake -G Ninja -B ./build` || `cmake -G Ninja -B ./build -DCMAKE_BUILD_TYPE=Release`
 - `ninja -C build`
 - `./build/DmxRasterizer.exe`
 

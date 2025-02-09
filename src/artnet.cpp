@@ -3,7 +3,7 @@
 
 namespace ArtNet {
 
-	void UniverseLogger::MeasureTimeDelta(uint8_t universeID) {
+	void UniverseLogger::MeasureTimeDelta(byte universeID) {
 		auto now = std::chrono::steady_clock::now();
 
 		if (networkTimeRecord[universeID].time_since_epoch().count() == 0) {
@@ -67,7 +67,7 @@ SOCKET setupArtNetSocket(int port) {
 	return sock;
 }
 
-void receiveArtNetData(SOCKET sock, std::array<uint8_t, ArtNet::TOTAL_DMX_CHANNELS>& dmxData, ArtNet::UniverseLogger& logger) {
+void receiveArtNetData(SOCKET sock, std::array<byte, ArtNet::TOTAL_DMX_CHANNELS>& dmxData, ArtNet::UniverseLogger& logger) {
 	while (true) {
 		char buffer[1024];
 		sockaddr_in senderAddr{};
@@ -85,7 +85,7 @@ void receiveArtNetData(SOCKET sock, std::array<uint8_t, ArtNet::TOTAL_DMX_CHANNE
 
 			int dmxDataLength = 0;
 			if (universeID < 3) {
-				const auto dmxStart = reinterpret_cast<uint8_t*>(&buffer[18]);
+				const auto dmxStart = reinterpret_cast<byte*>(&buffer[18]);
 				dmxDataLength = std::min(bytesReceived - 18, static_cast<int>(ArtNet::VRSL_UNIVERSE_GRID));
 
 				int universeOffset = universeID * ArtNet::VRSL_UNIVERSE_GRID - 1;
@@ -99,9 +99,9 @@ void receiveArtNetData(SOCKET sock, std::array<uint8_t, ArtNet::TOTAL_DMX_CHANNE
 			std::cout << "Received Data:\n";
 			auto deltas = logger.GetTimeDeltasMs();
 
-			for (size_t i = 0; i < deltas.size(); ++i) {
+			for (auto [index, value] : deltas | std::views::enumerate) {
 				std::cout << "\r\033[K";
-				std::cout << "-> Universe " << i << ": " << deltas[i] << "ms\n";
+				std::cout << "-> Universe " << index << ": " << value << "ms\n";
 			}
 
 			std::cout << "\033[" << (deltas.size() + 1) << "A" << std::flush;

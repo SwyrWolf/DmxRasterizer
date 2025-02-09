@@ -7,6 +7,7 @@
 #include <array>
 #include <ranges>
 #include <chrono>
+#include <cstddef>
 
 #include <winsock2.h>
 
@@ -25,10 +26,10 @@ namespace ArtNet {
 		std::array<std::chrono::duration<double>, VRSL_MAX_UNIVERSES> networkTimeDelta = {};
 
 	public:
-		void MeasureTimeDelta(uint8_t universeID);
+		void MeasureTimeDelta(std::byte universeID);
 		auto GetTimeDeltasMs();
 	};
 }
 
 SOCKET setupArtNetSocket(int port);
-void receiveArtNetData(SOCKET sock, std::array<uint8_t, ArtNet::TOTAL_DMX_CHANNELS>& dmxData, ArtNet::UniverseLogger& logger);
+void receiveArtNetData(SOCKET sock, std::array<byte, ArtNet::TOTAL_DMX_CHANNELS>& dmxData, ArtNet::UniverseLogger& logger);
