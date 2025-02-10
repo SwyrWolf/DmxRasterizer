@@ -18,7 +18,6 @@
 #include "glfw3.h"
 #include "SpoutGL/SpoutSender.h"
 
-#include "global.hpp"
 #include "shader.hpp"
 #include "artnet.hpp"
 
@@ -37,7 +36,7 @@ void renderLoop(GLFWwindow* window, ArtNet::UniverseLogger& logger, Shader& shad
 
 	glfwMakeContextCurrent(window);
 
-	while (true) {
+	while (logger.running) {
 		logger.waitForRender();
 		for (int i = 0; i < ArtNet::TOTAL_DMX_CHANNELS; ++i) {
 			dmxDataNormalized[i] = dmxData[i] / 255.0f;
@@ -130,8 +129,8 @@ int main(int argc, char* argv[]) {
 
 				case VERTICAL:
 					vertical = true;
-					RENDER_HEIGHT = V_RENDER_HEIGHT;
-					RENDER_WIDTH = V_RENDER_WIDTH;
+					RENDER_HEIGHT = ArtNet::V_RENDER_HEIGHT;
+					RENDER_WIDTH = ArtNet::V_RENDER_WIDTH;
 					RENDER_COLUMNS = ArtNet::V_GRID_COLUMNS;
 					RENDER_ROWS = ArtNet::V_GRID_ROWS;
 					break;
@@ -202,7 +201,7 @@ int main(int argc, char* argv[]) {
 	glEnableVertexAttribArray(1);
 
 	SOCKET artNetSocket = setupArtNetSocket(port);
-	std::jthread artNetThread(receiveArtNetData, artNetSocket, std::ref(dmxData), std::ref(dmxLogger));
+	std::thread artNetThread(receiveArtNetData, artNetSocket, std::ref(dmxData), std::ref(dmxLogger));
 
 	SpoutSender sender;
 	if (!sender.CreateSender("DmxRasterizer", RENDER_WIDTH, RENDER_HEIGHT)) {
@@ -219,15 +218,21 @@ int main(int argc, char* argv[]) {
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture, 0);
 
 	glfwMakeContextCurrent(nullptr);
-	std::jthread renderThread(renderLoop, window, std::ref(dmxLogger), std::ref(shader), VAO, dmxDataTexture, std::ref(sender), framebuffer, texture);
+	std::thread renderThread(renderLoop, window, std::ref(dmxLogger), std::ref(shader), VAO, dmxDataTexture, std::ref(sender), framebuffer, texture);
 
 	while (!glfwWindowShouldClose(window)) {
 		glfwPollEvents();
 	}
 
+	dmxLogger.running = false;
+	dmxLogger.signalRender();
+
+	closesocket(artNetSocket);
+	artNetThread.join();
+	renderThread.join();
+
 	glDeleteBuffers(1, &VBO);
 	glfwTerminate();
-	closesocket(artNetSocket);
 	WSACleanup();
 	return 0;
 }

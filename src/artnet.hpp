@@ -40,11 +40,12 @@ namespace ArtNet {
 
 		std::mutex dmxRenderPass;
 		std::atomic<bool> renderReady = false;
-
-	public:
+		
+		public:
+		std::atomic<bool> running = true;
 		void MeasureTimeDelta(byte universeID);
 		auto GetTimeDeltasMs();
-
+		
 		void signalRender();
 		void waitForRender();
 	};

@@ -1,5 +1,4 @@
 #include "artnet.hpp"
-#include "global.hpp"
 
 namespace ArtNet {
 
@@ -78,7 +77,7 @@ SOCKET setupArtNetSocket(int port) {
 }
 
 void receiveArtNetData(SOCKET sock, std::array<byte, ArtNet::TOTAL_DMX_CHANNELS>& dmxData, ArtNet::UniverseLogger& logger) {
-	while (true) {
+	while (logger.running) {
 		char buffer[1024];
 		sockaddr_in senderAddr{};
 		int senderAddrSize = sizeof(senderAddr);
