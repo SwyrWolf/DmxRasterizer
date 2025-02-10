@@ -20,6 +20,7 @@
 
 #include "shader.hpp"
 #include "artnet.hpp"
+#include "oscsend.hpp"
 
 std::array<uint8_t, ArtNet::TOTAL_DMX_CHANNELS> dmxData{};
 float dmxDataNormalized[ArtNet::TOTAL_DMX_CHANNELS] = {0.0f};
@@ -88,17 +89,20 @@ void renderLoop(GLFWwindow* window, ArtNet::UniverseLogger& logger, Shader& shad
 
 int main(int argc, char* argv[]) {
 	ArtNet::UniverseLogger dmxLogger;
+	OSC::OSCSender client(OSC::LOCAL_HOST, 12000);
 
 	bool vertical = false;
+	bool oscsending = false;
 	int port = 6454;
 	
-	enum ArgType { PORT, DEBUG, VERTICAL, UNKNOWN };
+	enum ArgType { PORT, DEBUG, VERTICAL, OSCSEND, UNKNOWN };
 	std::unordered_map<std::string, ArgType> argMap = {
 		{"-p", PORT},
 		{"--port", PORT},
 		{"-d", DEBUG},
 		{"--debug", DEBUG},
-		{"-v", VERTICAL}
+		{"-v", VERTICAL},
+		{"-o", OSCSEND}
 	};
 
 	if (argc > 1) {
@@ -134,6 +138,9 @@ int main(int argc, char* argv[]) {
 					RENDER_COLUMNS = ArtNet::V_GRID_COLUMNS;
 					RENDER_ROWS = ArtNet::V_GRID_ROWS;
 					break;
+
+				case OSCSEND:
+					oscsending = true;
 					
 				case UNKNOWN:
 				default:
