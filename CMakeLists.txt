@@ -4,6 +4,8 @@ project(DmxRasterizer VERSION 0.1.0)
 set(CMAKE_CXX_STANDARD 23)
 set(CCX=clang++)
 
+set(APP_ICO "${CMAKE_SOURCE_DIR}/src/resource/icon.rc")
+
 if(DEFINED ENV{EXTERNAL_CXX_LIBRARIES})
 	file(TO_CMAKE_PATH "$ENV{EXTERNAL_CXX_LIBRARIES}" EXTRN)
 else()
@@ -19,7 +21,7 @@ add_library(glad STATIC "${EXTRN}/glad/src/glad.c")
 
 file(GLOB SOURCE_FILES src/*.cpp) # Grab all .cpp files from src folder
 
-add_executable(${PROJECT_NAME} ${SOURCE_FILES})
+add_executable(${PROJECT_NAME} ${SOURCE_FILES} ${APP_ICO})
 
 target_link_libraries(
 	${PROJECT_NAME} PRIVATE
