@@ -1,4 +1,4 @@
-#version 330 core
+#version 460 core
 
 out vec4 FragColor;
 
@@ -11,6 +11,7 @@ void main() {
 	
 	int blockIndex = blockCoord.y + blockCoord.x * int(resolution.y / blockSize.y);
 	blockIndex = clamp(blockIndex, 0, 1559);
-	float brightness = texture(dmxDataTexture, float(blockIndex) / 1560.0).r;
+
+	float brightness = texelFetch(dmxDataTexture, blockIndex, 0).r;
 	FragColor = vec4(brightness, brightness, brightness, 1.0);
 }

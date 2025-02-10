@@ -26,8 +26,10 @@ std::array<uint8_t, ArtNet::TOTAL_DMX_CHANNELS> dmxData{};
 float dmxDataNormalized[ArtNet::TOTAL_DMX_CHANNELS] = {0.0f};
 GLuint dmxDataTexture;
 
-auto RENDER_HEIGHT = H_RENDER_HEIGHT;
-auto RENDER_WIDTH = H_RENDER_WIDTH;
+auto RENDER_HEIGHT = ArtNet::H_RENDER_HEIGHT;
+auto RENDER_WIDTH = ArtNet::H_RENDER_WIDTH;
+auto RENDER_COLUMNS = ArtNet::H_GRID_COLUMNS;
+auto RENDER_ROWS = ArtNet::H_GRID_ROWS;
 
 bool debug = false;
 
@@ -130,8 +132,10 @@ int main(int argc, char* argv[]) {
 					vertical = true;
 					RENDER_HEIGHT = V_RENDER_HEIGHT;
 					RENDER_WIDTH = V_RENDER_WIDTH;
+					RENDER_COLUMNS = ArtNet::V_GRID_COLUMNS;
+					RENDER_ROWS = ArtNet::V_GRID_ROWS;
 					break;
-
+					
 				case UNKNOWN:
 				default:
 					std::cerr << "Unkown argument: " << arg << std::endl;
@@ -171,7 +175,6 @@ int main(int argc, char* argv[]) {
 	glBindTexture(GL_TEXTURE_1D, dmxDataTexture);
 	glTexImage1D(GL_TEXTURE_1D, 0, GL_R32F, ArtNet::TOTAL_DMX_CHANNELS, 0, GL_RED, GL_FLOAT, dmxDataNormalized);
 	glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
 	Shader shader("shaders/vertex.glsl", "shaders/frag.glsl");
 	glUseProgram(shader.ID);
