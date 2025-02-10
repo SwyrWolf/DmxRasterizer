@@ -11,7 +11,6 @@
 #include <set>
 #include <unordered_map>
 #include <thread>
-#include <atomic>
 
 #pragma comment(lib, "Ws2_32.lib")
 
@@ -23,9 +22,6 @@
 #include "shader.hpp"
 #include "artnet.hpp"
 
-constexpr int FPS_LIMIT = 30;
-constexpr double FRAME_TIME = 1.0 / FPS_LIMIT;
-
 std::array<uint8_t, ArtNet::TOTAL_DMX_CHANNELS> dmxData{};
 float dmxDataNormalized[ArtNet::TOTAL_DMX_CHANNELS] = {0.0f};
 GLuint dmxDataTexture;
@@ -34,18 +30,13 @@ auto RENDER_HEIGHT = H_RENDER_HEIGHT;
 auto RENDER_WIDTH = H_RENDER_WIDTH;
 
 bool debug = false;
-std::atomic<bool> TH_Render = true;
 
-void renderLoop(GLFWwindow* window, Shader& shader, GLuint VAO, GLuint dmxDataTexture, SpoutSender& sender, GLuint framebuffer, GLuint texture) {
+void renderLoop(GLFWwindow* window, ArtNet::UniverseLogger& logger, Shader& shader, GLuint VAO, GLuint dmxDataTexture, SpoutSender& sender, GLuint framebuffer, GLuint texture) {
 
 	glfwMakeContextCurrent(window);
 
-	using clock = std::chrono::steady_clock;
-	auto lastFrameTime = clock::now();
-
-	while (TH_Render) {
-		auto frameStart = clock::now();
-
+	while (true) {
+		logger.waitForRender();
 		for (int i = 0; i < ArtNet::TOTAL_DMX_CHANNELS; ++i) {
 			dmxDataNormalized[i] = dmxData[i] / 255.0f;
 		}
@@ -85,14 +76,6 @@ void renderLoop(GLFWwindow* window, Shader& shader, GLuint VAO, GLuint dmxDataTe
 
 			glfwSwapBuffers(window);  // Display the rendered image
     }
-
-		auto frameEnd = clock::now();
-		std::chrono::duration<double> elapsedTime = frameEnd - frameStart;
-		double sleepTime = FRAME_TIME - elapsedTime.count();
-
-		if (sleepTime > 0) {
-			std::this_thread::sleep_for(std::chrono::duration<double>(sleepTime));
-		}
 	}
 	glfwMakeContextCurrent(nullptr);
 	glDeleteTextures(1, &texture);
@@ -233,14 +216,12 @@ int main(int argc, char* argv[]) {
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture, 0);
 
 	glfwMakeContextCurrent(nullptr);
-	std::jthread renderThread(renderLoop, window, std::ref(shader), VAO, dmxDataTexture, std::ref(sender), framebuffer, texture);
+	std::jthread renderThread(renderLoop, window, std::ref(dmxLogger), std::ref(shader), VAO, dmxDataTexture, std::ref(sender), framebuffer, texture);
 
 	while (!glfwWindowShouldClose(window)) {
 		glfwPollEvents();
 	}
 
-	TH_Render = false;
-	
 	glDeleteBuffers(1, &VBO);
 	glfwTerminate();
 	closesocket(artNetSocket);

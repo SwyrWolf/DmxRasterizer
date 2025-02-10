@@ -8,6 +8,8 @@
 #include <ranges>
 #include <chrono>
 #include <cstddef>
+#include <mutex>
+#include <atomic>
 
 #include <winsock2.h>
 
@@ -25,9 +27,15 @@ namespace ArtNet {
 		std::array<std::chrono::steady_clock::time_point, VRSL_MAX_UNIVERSES> networkTimeRecord = {};
 		std::array<std::chrono::duration<double>, VRSL_MAX_UNIVERSES> networkTimeDelta = {};
 
+		std::mutex dmxRenderPass;
+		std::atomic<bool> renderReady = false;
+
 	public:
-		void MeasureTimeDelta(std::byte universeID);
+		void MeasureTimeDelta(byte universeID);
 		auto GetTimeDeltasMs();
+
+		void signalRender();
+		void waitForRender();
 	};
 }
 

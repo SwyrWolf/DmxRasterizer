@@ -19,6 +19,16 @@ namespace ArtNet {
 		 	| std::views::transform([](const auto& i) { return i.count() * 1000; });
 	}
 
+	void UniverseLogger::signalRender() {
+		renderReady.store(true, std::memory_order_release);
+		renderReady.notify_one();
+	}
+
+	void UniverseLogger::waitForRender() {
+		renderReady.wait(false, std::memory_order_acquire);
+		renderReady.store(false, std::memory_order_release);
+	}
+
 }
 
 SOCKET setupArtNetSocket(int port) {
@@ -75,9 +85,9 @@ void receiveArtNetData(SOCKET sock, std::array<byte, ArtNet::TOTAL_DMX_CHANNELS>
 
 		int bytesReceived = recvfrom(sock, buffer, sizeof(buffer), 0, (sockaddr*)&senderAddr, &senderAddrSize);
 		if (bytesReceived == SOCKET_ERROR) {
-				int error = WSAGetLastError();
-				std::cerr << "Failed to receive UDP packet. Error: " << error << std::endl;
-				return;
+			int error = WSAGetLastError();
+			std::cerr << "Failed to receive UDP packet. Error: " << error << std::endl;
+			return;
 		}
 		
 		if (bytesReceived > 18 && std::strncmp(buffer, "Art-Net", 7) == 0) {
@@ -90,10 +100,11 @@ void receiveArtNetData(SOCKET sock, std::array<byte, ArtNet::TOTAL_DMX_CHANNELS>
 
 				int universeOffset = universeID * ArtNet::VRSL_UNIVERSE_GRID - 1;
 				if (universeOffset + dmxDataLength <= ArtNet::TOTAL_DMX_CHANNELS) {
-						std::memcpy(&dmxData[universeOffset], dmxStart, dmxDataLength);
+					std::memcpy(&dmxData[universeOffset], dmxStart, dmxDataLength);
 				}
 
 				logger.MeasureTimeDelta(universeID);
+				logger.signalRender();
 			}
 
 			std::cout << "Received Data:\n";
