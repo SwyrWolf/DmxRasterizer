@@ -89,10 +89,9 @@ void renderLoop(GLFWwindow* window, ArtNet::UniverseLogger& logger, Shader& shad
 
 int main(int argc, char* argv[]) {
 	ArtNet::UniverseLogger dmxLogger;
-	OSC::OSCSender client(OSC::LOCAL_HOST, 12000);
 
 	bool vertical = false;
-	bool oscsending = false;
+	bool oscArg = false;
 	int port = 6454;
 	
 	enum ArgType { PORT, DEBUG, VERTICAL, OSCSEND, UNKNOWN };
@@ -140,7 +139,9 @@ int main(int argc, char* argv[]) {
 					break;
 
 				case OSCSEND:
-					oscsending = true;
+					OSC::client.toggleOSC(true);
+					std::cout << "OSC Enabled" << std::endl;
+					break;
 					
 				case UNKNOWN:
 				default:

@@ -1,4 +1,5 @@
 #include "artnet.hpp"
+#include "oscsend.hpp"
 
 namespace ArtNet {
 
@@ -100,6 +101,12 @@ void receiveArtNetData(SOCKET sock, std::array<byte, ArtNet::TOTAL_DMX_CHANNELS>
 				int universeOffset = (universeID * ArtNet::VRSL_UNIVERSE_GRID);
 				if (universeOffset + dmxDataLength <= ArtNet::TOTAL_DMX_CHANNELS) {
 					std::memcpy(&dmxData[universeOffset], dmxStart, dmxDataLength);
+
+					if (OSC::client.getToggle()) {
+						for (auto [index, value] : dmxData | std::views::enumerate) {
+							OSC::client.sendOSCMessage(index, value);
+						}
+					}
 				}
 
 				logger.MeasureTimeDelta(universeID);

@@ -20,12 +20,17 @@ namespace OSC {
 	private:
 		SOCKET sock;
 		sockaddr_in serverAddr;
+		bool senderToggle = false;
 		
 		void padString(std::vector<std::byte>& buffer, const std::string& str);
 
 	public:
 		OSCSender(const std::string& ip, int port);
 		void sendOSCMessage(int channel, uint8_t val);
+		void toggleOSC(bool set);
+		bool getToggle();
 		~OSCSender();
 	};
+
+	extern OSCSender client;
 }

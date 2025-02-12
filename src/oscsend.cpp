@@ -1,6 +1,9 @@
 #include "oscsend.hpp"
 
 namespace OSC {
+
+	OSCSender client(OSC::LOCAL_HOST, 12000);
+
 	OSCSender::OSCSender(const std::string& ip, int port) {
 		WSADATA wsa;
 		WSAStartup(MAKEWORD(2, 2), &wsa);
@@ -30,11 +33,21 @@ namespace OSC {
 		padString(buffer, ",i");
 
 		uint32_t intValue = 0x00'00'00'00 | val;
+		intValue = htonl(intValue);
+
+		buffer.insert(buffer.end(), reinterpret_cast<std::byte*>(&intValue),
+			reinterpret_cast<std::byte*>(&intValue) + sizeof(intValue));
 
 		sendto(sock, reinterpret_cast<const char*>(buffer.data()), buffer.size(), 0,
 			reinterpret_cast<sockaddr*>(&serverAddr), sizeof(serverAddr));
+	}
 
-		std::cout << "Sent OSC: " << address << " = " << static_cast<int>(val) << std::endl;
+	void OSCSender::toggleOSC(bool set) {
+		senderToggle = set;
+	}
+
+	bool OSCSender::getToggle() {
+		return senderToggle;
 	}
 
 	OSCSender::~OSCSender() {
