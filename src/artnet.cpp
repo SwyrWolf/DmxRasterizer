@@ -79,30 +79,33 @@ SOCKET setupArtNetSocket(int port) {
 
 void receiveArtNetData(SOCKET sock, std::array<byte, ArtNet::TOTAL_DMX_CHANNELS>& dmxData, ArtNet::UniverseLogger& logger) {
 	while (logger.running) {
-		char buffer[1024];
+		std::array<char, 1024> buffer{};
 		sockaddr_in senderAddr{};
 		int senderAddrSize = sizeof(senderAddr);
 
-		int bytesReceived = recvfrom(sock, buffer, sizeof(buffer), 0, (sockaddr*)&senderAddr, &senderAddrSize);
+		int bytesReceived = recvfrom(sock, buffer.data(), buffer.size(), 0, (sockaddr*)&senderAddr, &senderAddrSize);
 		if (bytesReceived == SOCKET_ERROR) {
 			int error = WSAGetLastError();
 			std::cerr << "Failed to receive UDP packet. Error: " << error << std::endl;
 			return;
 		}
 		
-		if (bytesReceived > 18 && std::strncmp(buffer, "Art-Net", 7) == 0) {
+		if (bytesReceived > 18 && std::strncmp(buffer.data(), "Art-Net", 7) == 0) {
 			uint16_t universeID = buffer[14] | (buffer[15] << 8);
-
-			int dmxDataLength = 0;
+			
 			if (universeID < 3) {
-				const byte* dmxStart = reinterpret_cast<const byte*>(&buffer[18]);
-				dmxDataLength = std::min<int>(bytesReceived - 18, static_cast<int>(ArtNet::DMX_UNIVERSE_SIZE));
+				int dmxDataLength = std::min<int>(bytesReceived - 18, static_cast<int>(ArtNet::DMX_UNIVERSE_SIZE));
+				std::span<const std::byte> dmxStart{reinterpret_cast<const std::byte*>(buffer.data() + 18), 512};
 
+				std::array<std::byte, 512> dmxArray;
+				std::memcpy(dmxArray.data(), dmxStart.data(), dmxArray.size());
+				
 				int universeOffset = (universeID * ArtNet::VRSL_UNIVERSE_GRID);
 				if (universeOffset + dmxDataLength <= ArtNet::TOTAL_DMX_CHANNELS) {
-					std::memcpy(&dmxData[universeOffset], dmxStart, dmxDataLength);
+					std::memcpy(&dmxData[universeOffset], dmxStart.data(), dmxDataLength);
 
 					if (OSC::client.getToggle()) {
+						// OSC::client.sendOSCBundle(dmxArray, universeOffset);
 						for (auto [index, value] : dmxData | std::views::enumerate) {
 							OSC::client.sendOSCMessage(index, value);
 						}
