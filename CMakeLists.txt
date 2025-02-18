@@ -14,7 +14,6 @@ endif()
 
 include_directories(${EXTRN}/GLAD/include)
 include_directories(${EXTRN}/GLFW/include)
-include_directories(${EXTRN}/GLM)
 include_directories(${EXTRN}/SPOUT/include)
 
 add_library(glad STATIC "${EXTRN}/glad/src/glad.c")
