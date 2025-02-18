@@ -15,7 +15,7 @@ namespace ArtNet {
 	}
 
 	auto UniverseLogger::GetTimeDeltasMs() {
-		 return networkTimeDelta 
+		 return networkTimeDelta
 		 	| std::views::transform([](const auto& i) { return i.count() * 1000; });
 	}
 

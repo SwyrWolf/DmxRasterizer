@@ -22,7 +22,6 @@ namespace OSC {
 		SOCKET sock;
 		sockaddr_in serverAddr;
 		bool senderToggle = false;
-		
 		void padString(std::vector<std::byte>& buffer, const std::string& str);
 
 	public:
