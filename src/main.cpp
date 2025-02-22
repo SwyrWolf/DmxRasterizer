@@ -10,8 +10,8 @@
 #pragma comment(lib, "Ws2_32.lib")
 
 #include "./external/vendor/glad.h"
-#include "glfw3.h"
-#include "SpoutGL/SpoutSender.h"
+#include <glfw3.h>
+#include <SpoutGL/SpoutSender.h>
 
 #include "shader.hpp"
 #include "artnet.hpp"
