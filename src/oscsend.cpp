@@ -6,7 +6,7 @@ namespace OSC {
 
 	OSCSender::OSCSender(const std::string& ip, int port) {
 		WSADATA wsa;
-		WSAStartup(MAKEWORD(2, 2), &wsa);
+		WSAStartup(0x0202, &wsa);
 
 		sock = socket(AF_INET, SOCK_DGRAM, 0);
 		serverAddr.sin_family = AF_INET;
