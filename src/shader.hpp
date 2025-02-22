@@ -4,7 +4,7 @@
 #define SHADER_H
 
 #include <string>
-#include <glad/glad.h>
+#include "./external/vendor/glad.h"
 
 class Shader {
 public:

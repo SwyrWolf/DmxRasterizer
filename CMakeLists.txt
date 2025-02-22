@@ -12,11 +12,8 @@ else()
 	message(FATAL_ERROR "Environment variable EXTRN is not set!")
 endif()
 
-include_directories(${EXTRN}/GLAD/include)
 include_directories(${EXTRN}/GLFW/include)
 include_directories(${EXTRN}/SPOUT/include)
-
-add_library(glad STATIC "${EXTRN}/glad/src/glad.c")
 
 file(GLOB SOURCE_FILES src/*.cpp) # Grab all .cpp files from src folder
 

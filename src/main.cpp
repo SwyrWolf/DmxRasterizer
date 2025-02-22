@@ -9,7 +9,7 @@
 
 #pragma comment(lib, "Ws2_32.lib")
 
-#include "glad/glad.h"
+#include "./external/vendor/glad.h"
 #include "glfw3.h"
 #include "SpoutGL/SpoutSender.h"
 
