@@ -1,14 +1,9 @@
-#define NOMINMAX  // Disable Windows min/max macros
 #include <winsock2.h>
 #include <windows.h>
 
 #include <iostream>
-#include <algorithm>
 #include <array>
-#include <cstring>
-#include <fstream>
 #include <cstdint>
-#include <set>
 #include <unordered_map>
 #include <thread>
 
@@ -228,6 +223,7 @@ int main(int argc, char* argv[]) {
 	glfwMakeContextCurrent(nullptr);
 	std::thread renderThread(renderLoop, window, std::ref(dmxLogger), std::ref(shader), VAO, dmxDataTexture, std::ref(sender), framebuffer, texture);
 
+	//Main thread loop
 	while (!glfwWindowShouldClose(window)) {
 		glfwPollEvents();
 	}

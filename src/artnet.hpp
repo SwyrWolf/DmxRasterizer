@@ -1,6 +1,6 @@
 #pragma once
 
-#define NOMINMAX  // Disable Windows min/max macros
+// #define NOMINMAX  // Disable Windows min/max macros
 
 #include <iostream>
 #include <cstdint>
