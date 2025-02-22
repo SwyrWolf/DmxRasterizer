@@ -15,7 +15,7 @@ endif()
 include_directories(${EXTRN}/GLFW/include)
 include_directories(${EXTRN}/SPOUT/include)
 
-file(GLOB SOURCE_FILES src/*.cpp) # Grab all .cpp files from src folder
+file(GLOB SOURCE_FILES src/*.cpp src/*.c) # Grab all .cpp files from src folder
 
 add_executable(${PROJECT_NAME} ${SOURCE_FILES} ${APP_ICO})
 
