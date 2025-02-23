@@ -18,7 +18,7 @@
 #include "oscsend.hpp"
 
 std::array<uint8_t, ArtNet::TOTAL_DMX_CHANNELS> dmxData{};
-float dmxDataNormalized[ArtNet::TOTAL_DMX_CHANNELS] = {0.0f};
+std::array<float, ArtNet::TOTAL_DMX_CHANNELS> dmxDataNormalized{};
 GLuint dmxDataTexture;
 
 auto RENDER_HEIGHT = ArtNet::H_RENDER_HEIGHT;
@@ -40,7 +40,7 @@ void renderLoop(GLFWwindow* window, ArtNet::UniverseLogger& logger, Shader& shad
 
 		// Update the DMX data into texture
 		glBindTexture(GL_TEXTURE_1D, dmxDataTexture);
-		glTexSubImage1D(GL_TEXTURE_1D, 0, 0, ArtNet::TOTAL_DMX_CHANNELS, GL_RED, GL_FLOAT, dmxDataNormalized);
+		glTexSubImage1D(GL_TEXTURE_1D, 0, 0, ArtNet::TOTAL_DMX_CHANNELS, GL_RED, GL_FLOAT, dmxDataNormalized.data());
 
 		// Rendering
 		glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
@@ -175,7 +175,7 @@ int main(int argc, char* argv[]) {
 
 	glGenTextures(1, &dmxDataTexture);
 	glBindTexture(GL_TEXTURE_1D, dmxDataTexture);
-	glTexImage1D(GL_TEXTURE_1D, 0, GL_R32F, ArtNet::TOTAL_DMX_CHANNELS, 0, GL_RED, GL_FLOAT, dmxDataNormalized);
+	glTexImage1D(GL_TEXTURE_1D, 0, GL_R32F, ArtNet::TOTAL_DMX_CHANNELS, 0, GL_RED, GL_FLOAT, dmxDataNormalized.data());
 	glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 
 	Shader shader("shaders/vertex.glsl", "shaders/frag.glsl");
