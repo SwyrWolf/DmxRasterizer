@@ -5,13 +5,16 @@
 - Clang (`winget install LLVM.LLVM`)
 - MSVC 	(`winget install Microsoft.VisualStudio.2022.BuildTools`)
 
-**ENVIRONMENT**
-- Envrionment Variable: `EXTERNAL_CXX_LIBRARIES` needs to be created and pointed at your root folder that contains GLM / GLFW folders.
-
 ## Build commands (From project root directory)
-- `cmake -G Ninja -B ./build` || `cmake -G Ninja -B -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ ./build -DCMAKE_BUILD_TYPE=Release`
+- `cmake -G Ninja -B ./build`
 - `ninja -C build`
 - `./build/DmxRasterizer.exe`
+
+**OPTIONAL BUILDS**
+- Set Build to release mode
+`cmake -G Ninja -B ./build -DCMAKE_BUILD_TYPE=Release`
+- Use local Werelib library
+`cmake -G Ninja -B build -DWERELIB_LOCAL=ON -DWERELIB_SRC="Path/To//wlfstn/werelib"`
 
 ## Build messages
 - When building Spout2 for the first time it'll generate 22 warnings

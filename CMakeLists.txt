@@ -10,6 +10,20 @@ message(STATUS "Using C++ standard: ${CMAKE_CXX_STANDARD}")
 set(APP_ICO "${CMAKE_SOURCE_DIR}/src/resource/icon.rc")
 
 include(FetchContent)
+
+option(WERELIB_LOCAL "Use local Werelib" OFF)
+if(WERELIB_LOCAL)
+	if(NOT DEFINED WERELIB_SRC)
+		message(FATAL_ERROR "Please define WERELIB_SRC (`-DWERELIB_SRC=/path/to/Werelib)")
+	endif()
+	message(STATUS "Using local Werelib.")
+	FetchContent_Declare(
+		Werelib
+		SOURCE_DIR ${WERELIB_SRC}
+	)
+	FetchContent_MakeAvailable(Werelib)
+endif()
+
 FetchContent_Declare(
 	glfw
 	GIT_REPOSITORY https://github.com/glfw/glfw.git
