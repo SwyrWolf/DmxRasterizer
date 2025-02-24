@@ -39,7 +39,7 @@ namespace ArtNet {
 		std::array<std::chrono::duration<double>, VRSL_MAX_UNIVERSES> networkTimeDelta = {};
 
 		std::mutex dmxRenderPass;
-		std::atomic<bool> renderReady = false;
+		std::atomic<bool> renderReady = true;
 		
 		public:
 		std::atomic<bool> running = true;
