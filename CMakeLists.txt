@@ -9,17 +9,7 @@ message(STATUS "Using C++ standard: ${CMAKE_CXX_STANDARD}")
 
 set(APP_ICO "${CMAKE_SOURCE_DIR}/src/resource/icon.rc")
 
-if(DEFINED ENV{EXTERNAL_CXX_LIBRARIES})
-	file(TO_CMAKE_PATH "$ENV{EXTERNAL_CXX_LIBRARIES}" EXTRN)
-else()
-	message(FATAL_ERROR "Environment variable EXTRN is not set!")
-endif()
-
-# include_directories(${EXTRN}/GLFW/include)
-# include_directories(${EXTRN}/SPOUT/include)
-
 include(FetchContent)
-
 FetchContent_Declare(
 	glfw
 	GIT_REPOSITORY https://github.com/glfw/glfw.git
@@ -52,7 +42,4 @@ target_link_libraries(
 	glad
 	glfw
 	Spout_static
-	# "${EXTRN}/GLFW/lib/glfw3.lib"
-	# "${EXTRN}/SPOUT/MD/lib/Spout_static.lib"
-	# "${EXTRN}/SPOUT/MD/lib/SpoutLibrary.lib"
 )
