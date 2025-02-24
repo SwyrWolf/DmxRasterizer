@@ -7,8 +7,6 @@
 #include <unordered_map>
 #include <thread>
 
-#pragma comment(lib, "Ws2_32.lib")
-
 #include "./external/vendor/glad.h"
 #include <glfw3.h>
 #include <SpoutGL/SpoutSender.h>
