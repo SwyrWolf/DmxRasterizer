@@ -47,6 +47,9 @@ add_executable(${PROJECT_NAME} ${SOURCE_FILES} ${APP_ICO})
 target_include_directories(${PROJECT_NAME} PRIVATE
 	${glfw_SOURCE_DIR}/include/GLFW
 	${spout2_SOURCE_DIR}/SPOUTSDK
+	if(WERELIB_LOCAL)
+		${WERELIB_SRC}/include
+	endif()
 )
 
 target_link_libraries(

@@ -1,5 +1,6 @@
 #include "artnet.hpp"
 #include "oscsend.hpp"
+#include "werelib.hpp"
 
 namespace ArtNet {
 
@@ -95,7 +96,7 @@ void receiveArtNetData(SOCKET sock, std::array<byte, ArtNet::TOTAL_DMX_CHANNELS>
 			
 			if (universeID < 3) {
 				int dmxDataLength = std::min<int>(bytesReceived - 18, static_cast<int>(ArtNet::DMX_UNIVERSE_SIZE));
-				std::span<const std::byte> dmxStart{reinterpret_cast<const std::byte*>(buffer.data() + 18), 512};
+				std::span<const were::byte> dmxStart{reinterpret_cast<const were::byte*>(buffer.data() + 18), 512};
 
 				std::array<std::byte, 512> dmxArray;
 				std::memcpy(dmxArray.data(), dmxStart.data(), dmxArray.size());
