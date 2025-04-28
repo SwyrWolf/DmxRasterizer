@@ -33,7 +33,7 @@ namespace ArtNet {
 
 SOCKET setupArtNetSocket(int port) {
 	WSADATA wsaData;
-	if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
+	if (WSAStartup(0x0202, &wsaData) != 0) {
 		std::cerr << "Failed to initialize Winsock." << std::endl;
 		exit(-1);
 	}

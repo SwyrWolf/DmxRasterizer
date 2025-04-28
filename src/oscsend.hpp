@@ -14,8 +14,8 @@
 #pragma comment(lib, "ws2_32.lib")
 
 namespace OSC {
-	constexpr std::string VRSL_PREFIX = "/VRSL/ch";
-	constexpr std::string LOCAL_HOST = "127.0.0.1";
+	inline const std::string VRSL_PREFIX = "/VRSL/ch";
+	inline const std::string LOCAL_HOST = "127.0.0.1";
 
 	class OSCSender {
 	private:
