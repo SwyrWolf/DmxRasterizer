@@ -31,7 +31,7 @@ namespace ArtNet {
 
 }
 
-SOCKET setupArtNetSocket(int port) {
+SOCKET setupArtNetSocket(uint16_t port) {
 	WSADATA wsaData;
 	if (WSAStartup(0x0202, &wsaData) != 0) {
 		std::cerr << "Failed to initialize Winsock." << std::endl;
@@ -47,7 +47,7 @@ SOCKET setupArtNetSocket(int port) {
 
 	sockaddr_in localAddr{};
 	localAddr.sin_family = AF_INET;
-	localAddr.sin_port = htons(port); // Change to 6455 if testing another port
+	localAddr.sin_port = htons(port);
 	localAddr.sin_addr.s_addr = INADDR_ANY;
 
 	int enable = 1;
