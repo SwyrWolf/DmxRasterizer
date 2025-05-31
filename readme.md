@@ -1,5 +1,7 @@
 # DMX Rasterizer
 
+![Preview Monitor display in Resolume Arena](/docs/DMXR_WH720.png)
+
 *DMX Rasterizer is an realtime renderer that transforms DMX data over ArtNet into a luminance texture grid of DMX channels in 16x16 pixel sizes.*</br>
 *By default DMX Rasterizer will render exclusively to a spout output, no need for window capture. You can enable a window with the -d argument*
 
