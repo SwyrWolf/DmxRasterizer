@@ -31,7 +31,7 @@ namespace ArtNet {
 
 }
 
-SOCKET setupArtNetSocket(int port) {
+SOCKET setupArtNetSocket(int port, const std::optional<std::string>& bindIpOpt) {
 	WSADATA wsaData;
 	if (WSAStartup(0x0202, &wsaData) != 0) {
 		std::cerr << "Failed to initialize Winsock." << std::endl;
@@ -45,17 +45,33 @@ SOCKET setupArtNetSocket(int port) {
 		exit(-1);
 	}
 
-	sockaddr_in localAddr{};
-	localAddr.sin_family = AF_INET;
-	localAddr.sin_port = htons(port); // Change to 6455 if testing another port
-	localAddr.sin_addr.s_addr = INADDR_ANY;
-
+	
 	int enable = 1;
 	if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, (const char*)&enable, sizeof(enable)) < 0) {
 		std::cerr << "Failed to set socket options." << std::endl;
 		closesocket(sock);
 		WSACleanup();
 		exit(-1);
+	}
+
+	if (setsockopt(sock, SOL_SOCKET, SO_BROADCAST, (const char*)&enable, sizeof(enable)) < 0) {
+		std::cerr << "Failed to enable SO_BROADCAST." << std::endl;
+		closesocket(sock);
+		WSACleanup();
+		exit(-1);
+	}
+	
+	sockaddr_in localAddr{};
+	localAddr.sin_family = AF_INET;
+	localAddr.sin_port = htons(port); // Change to 6455 if testing another port
+	
+	if (bindIpOpt.has_value()) {
+		localAddr.sin_addr.s_addr = inet_addr(bindIpOpt->c_str());
+		std::cout << "Binding to interface: " << *bindIpOpt << std::endl;
+	} else {
+		localAddr.sin_addr.s_addr = INADDR_ANY;
+		std::cerr << "Warning: No bind IP specified. Using INADDR_ANY (0.0.0.0).\n";
+		std::cerr << "         Broadcast packets may not be received reliably on multi-NIC systems.\n";
 	}
 
 	if (bind(sock, reinterpret_cast<sockaddr *>(&localAddr), sizeof(localAddr)) == SOCKET_ERROR) {
@@ -93,7 +109,7 @@ void receiveArtNetData(SOCKET sock, std::array<byte, ArtNet::TOTAL_DMX_CHANNELS>
 		if (bytesReceived > 18 && std::strncmp(buffer.data(), "Art-Net", 7) == 0) {
 			uint16_t universeID = buffer[14] | (buffer[15] << 8);
 			
-			if (universeID < 3) {
+			if (universeID < TOTAL_UNIVERSES) {
 				int dmxDataLength = std::min<int>(bytesReceived - 18, static_cast<int>(ArtNet::DMX_UNIVERSE_SIZE));
 				std::span<const std::byte> dmxStart{reinterpret_cast<const std::byte*>(buffer.data() + 18), 512};
 

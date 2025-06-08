@@ -87,15 +87,20 @@ int main(int argc, char* argv[]) {
 	bool vertical = false;
 	bool oscArg = false;
 	int port = 6454;
+	std::optional<std::string> bindIp;
+	bool NineChannels = false;
 	
-	enum ArgType { PORT, DEBUG, VERTICAL, OSCSEND, UNKNOWN };
+	enum ArgType { PORT, DEBUG, VERTICAL, OSCSEND, BINDIP, CH9, UNKNOWN };
 	std::unordered_map<std::string, ArgType> argMap = {
 		{"-p", PORT},
 		{"--port", PORT},
 		{"-d", DEBUG},
 		{"--debug", DEBUG},
 		{"-v", VERTICAL},
-		{"-o", OSCSEND}
+		{"-o", OSCSEND},
+		{"--bind", BINDIP}
+		{"-9", CH9}
+		{"--RGB", CH9}
 	};
 
 	if (argc > 1) {
@@ -136,6 +141,23 @@ int main(int argc, char* argv[]) {
 					OSC::client.toggleOSC(true);
 					std::cout << "OSC Enabled" << std::endl;
 					break;
+				
+				case BINDIP:
+					if (i + 1 < argc) {
+						std::string ip = argv[++i];
+						IN_ADDR testAddr; // <-- Declare here
+						if (InetPtonA(AF_INET, ip.c_str(), &testAddr) != 1) {
+							std::cerr << "Warning: Invalid IP format: " << ip << "\n";
+						} else {
+							bindIp = ip;
+						}
+					} else {
+						std::cerr << "Error: Missing IP address after --bind\n";
+					}
+					break;
+
+				case CH9:
+					NineChannels = true;
 					
 				case UNKNOWN:
 				default:
@@ -202,7 +224,7 @@ int main(int argc, char* argv[]) {
 	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
 	glEnableVertexAttribArray(1);
 
-	SOCKET artNetSocket = setupArtNetSocket(port);
+	SOCKET artNetSocket = setupArtNetSocket(port, bindIp);
 	std::thread artNetThread(receiveArtNetData, artNetSocket, std::ref(dmxData), std::ref(dmxLogger));
 
 	SpoutSender sender;
