@@ -88,18 +88,21 @@ int main(int argc, char* argv[]) {
 	bool oscArg = false;
 	int port = 6454;
 	std::optional<std::string> bindIp;
+	std::string Version = "v0.7.0";
 	bool NineChannels = false;
 	
-	enum ArgType { PORT, DEBUG, VERTICAL, OSCSEND, BINDIP, CH9, UNKNOWN };
+	enum ArgType {VERSION, PORT, DEBUG, VERTICAL, OSCSEND, BINDIP, CH9, UNKNOWN };
 	std::unordered_map<std::string, ArgType> argMap = {
+		{"-v", VERSION},
+		{"--version", VERSION},
 		{"-p", PORT},
 		{"--port", PORT},
 		{"-d", DEBUG},
 		{"--debug", DEBUG},
 		{"-v", VERTICAL},
 		{"-o", OSCSEND},
-		{"--bind", BINDIP}
-		{"-9", CH9}
+		{"--bind", BINDIP},
+		{"-9", CH9},
 		{"--RGB", CH9}
 	};
 
@@ -111,6 +114,9 @@ int main(int argc, char* argv[]) {
 			ArgType argType = (theArg != argMap.end()) ? theArg->second : UNKNOWN;
 
 			switch (argType) {
+				case VERSION:
+					std::cout << "DMX Rasterizer: " << Version << std::endl;
+					break;
 				case PORT:
 					if (i + 1 < argc) {
 						try {

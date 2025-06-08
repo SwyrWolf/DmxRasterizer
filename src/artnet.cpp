@@ -66,7 +66,12 @@ SOCKET setupArtNetSocket(int port, const std::optional<std::string>& bindIpOpt) 
 	localAddr.sin_port = htons(port); // Change to 6455 if testing another port
 	
 	if (bindIpOpt.has_value()) {
-		localAddr.sin_addr.s_addr = inet_addr(bindIpOpt->c_str());
+		IN_ADDR addr{};
+		if (InetPtonA(AF_INET, bindIpOpt->c_str(), &addr) != 1) {
+			std::cerr << "Invalid IP address format: " << *bindIpOpt << "\n";
+			exit(-1);
+		}
+		localAddr.sin_addr = addr;
 		std::cout << "Binding to interface: " << *bindIpOpt << std::endl;
 	} else {
 		localAddr.sin_addr.s_addr = INADDR_ANY;
@@ -109,7 +114,7 @@ void receiveArtNetData(SOCKET sock, std::array<byte, ArtNet::TOTAL_DMX_CHANNELS>
 		if (bytesReceived > 18 && std::strncmp(buffer.data(), "Art-Net", 7) == 0) {
 			uint16_t universeID = buffer[14] | (buffer[15] << 8);
 			
-			if (universeID < TOTAL_UNIVERSES) {
+			if (universeID < 3) {
 				int dmxDataLength = std::min<int>(bytesReceived - 18, static_cast<int>(ArtNet::DMX_UNIVERSE_SIZE));
 				std::span<const std::byte> dmxStart{reinterpret_cast<const std::byte*>(buffer.data() + 18), 512};
 
