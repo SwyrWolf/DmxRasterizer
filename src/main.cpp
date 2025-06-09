@@ -231,7 +231,9 @@ int main(int argc, char* argv[]) {
 	glEnableVertexAttribArray(1);
 
 	SOCKET artNetSocket = setupArtNetSocket(port, bindIp);
-	std::thread artNetThread(receiveArtNetData, artNetSocket, std::ref(dmxData), std::ref(dmxLogger));
+
+	std::span<byte> dmxSpan(dmxData);
+	std::thread artNetThread(receiveArtNetData, artNetSocket, std::ref(dmxSpan), std::ref(dmxLogger));
 
 	SpoutSender sender;
 	if (!sender.CreateSender("DmxRasterizer", RENDER_WIDTH, RENDER_HEIGHT)) {

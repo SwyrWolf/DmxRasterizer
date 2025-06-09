@@ -5,6 +5,7 @@
 #include <iostream>
 #include <cstdint>
 #include <array>
+#include <span>
 #include <ranges>
 #include <chrono>
 #include <cstddef>
@@ -52,4 +53,4 @@ namespace ArtNet {
 }
 
 SOCKET setupArtNetSocket(int port, const std::optional<std::string>& bindIpOpt);
-void receiveArtNetData(SOCKET sock, std::array<byte, ArtNet::TOTAL_DMX_CHANNELS>& dmxData, ArtNet::UniverseLogger& logger);
+void receiveArtNetData(SOCKET sock, std::span<byte>& dmxData, ArtNet::UniverseLogger& logger);
