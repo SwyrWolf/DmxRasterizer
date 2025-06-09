@@ -233,7 +233,7 @@ int main(int argc, char* argv[]) {
 	SOCKET artNetSocket = setupArtNetSocket(port, bindIp);
 
 	std::span<byte> dmxSpan(dmxData);
-	std::thread artNetThread(receiveArtNetData, artNetSocket, std::ref(dmxSpan), std::ref(dmxLogger));
+	std::thread artNetThread(receiveArtNetData, artNetSocket, dmxSpan, std::ref(dmxLogger));
 
 	SpoutSender sender;
 	if (!sender.CreateSender("DmxRasterizer", RENDER_WIDTH, RENDER_HEIGHT)) {

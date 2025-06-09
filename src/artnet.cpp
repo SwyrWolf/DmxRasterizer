@@ -98,7 +98,7 @@ SOCKET setupArtNetSocket(int port, const std::optional<std::string>& bindIpOpt) 
 	return sock;
 }
 
-void receiveArtNetData(SOCKET sock, std::span<byte>& dmxData, ArtNet::UniverseLogger& logger) {
+void receiveArtNetData(SOCKET sock, std::span<byte> dmxData, ArtNet::UniverseLogger& logger) {
 	while (logger.running) {
 		std::array<char, 1024> buffer{};
 		sockaddr_in senderAddr{};
