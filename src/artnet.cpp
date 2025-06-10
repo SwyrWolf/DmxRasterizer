@@ -114,7 +114,7 @@ void receiveArtNetData(SOCKET sock, std::span<byte> dmxData, ArtNet::UniverseLog
 		if (bytesReceived > 18 && std::strncmp(buffer.data(), "Art-Net", 7) == 0) {
 			uint16_t universeID = buffer[14] | (buffer[15] << 8);
 			
-			if (universeID < 3) {
+			if (universeID < logger.Universes) {
 				int dmxDataLength = std::min<int>(bytesReceived - 18, static_cast<int>(ArtNet::DMX_UNIVERSE_SIZE));
 				std::span<const std::byte> dmxStart{reinterpret_cast<const std::byte*>(buffer.data() + 18), 512};
 
@@ -122,7 +122,7 @@ void receiveArtNetData(SOCKET sock, std::span<byte> dmxData, ArtNet::UniverseLog
 				std::memcpy(dmxArray.data(), dmxStart.data(), dmxArray.size());
 				
 				int universeOffset = (universeID * ArtNet::VRSL_UNIVERSE_GRID);
-				if (universeOffset + dmxDataLength <= ArtNet::TOTAL_DMX_CHANNELS) {
+				if (universeOffset + dmxDataLength <= logger.Channels) {
 					std::memcpy(&dmxData[universeOffset], dmxStart.data(), dmxDataLength);
 
 					if (OSC::client.getToggle()) {
