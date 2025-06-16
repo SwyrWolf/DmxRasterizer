@@ -81,7 +81,7 @@ void renderLoop(GLFWwindow* window, ArtNet::UniverseLogger& logger, Shader& shad
 
 int main(int argc, char* argv[]) {
 	ArtNet::UniverseLogger dmxLogger;
-	
+	it p
 	bool vertical = false;
 	bool oscArg = false;
 	int port = 6454;
