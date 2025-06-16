@@ -86,9 +86,9 @@ int main(int argc, char* argv[]) {
 	bool oscArg = false;
 	int port = 6454;
 	std::optional<std::string> bindIp;
-	std::string Version = "v0.8.0";
+	std::string Version = "v0.8.1";
 	bool NineChannels = false;
-	
+
 	enum ArgType {VERSION, PORT, DEBUG, VERTICAL, OSCSEND, BINDIP, CH9, UNKNOWN };
 	std::unordered_map<std::string, ArgType> argMap = {
 		{"-v", VERSION},
@@ -173,6 +173,16 @@ int main(int argc, char* argv[]) {
 				break;
 			}
 		}
+	}
+
+	if (!bindIp) {
+		int input;
+		std::cout << "Unicase Mode (0 - No | 1 - True)\nInput: ";
+		std::cin >> input;
+
+		bindIp = (input == 0) ? "0.0.0.0"
+			: (input == 1) ? "127.0.0.1"
+			: "0.0.0.0";
 	}
 	
 	dmxLogger.dmxData.resize(dmxLogger.Channels);

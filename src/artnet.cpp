@@ -28,7 +28,6 @@ namespace ArtNet {
 		renderReady.wait(false, std::memory_order_acquire);
 		renderReady.store(false, std::memory_order_release);
 	}
-
 }
 
 SOCKET setupArtNetSocket(int port, const std::optional<std::string>& bindIpOpt) {
@@ -74,7 +73,7 @@ SOCKET setupArtNetSocket(int port, const std::optional<std::string>& bindIpOpt) 
 		localAddr.sin_addr = addr;
 		std::cout << "Binding to interface: " << *bindIpOpt << std::endl;
 	} else {
-		localAddr.sin_addr.s_addr = INADDR_ANY;
+		localAddr.sin_addr.s_addr = INADDR_LOOPBACK;
 		std::cerr << "Warning: No bind IP specified. Using INADDR_ANY (0.0.0.0).\n";
 		std::cerr << "         Broadcast packets may not be received reliably on multi-NIC systems.\n";
 	}
