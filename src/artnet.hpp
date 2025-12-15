@@ -2,12 +2,11 @@
 
 // #define NOMINMAX  // Disable Windows min/max macros
 
-#include <iostream>
+#include <optional>
 #include <cstdint>
 #include <array>
 #include <vector>
 #include <span>
-#include <ranges>
 #include <chrono>
 #include <cstddef>
 #include <mutex>
@@ -42,10 +41,10 @@ namespace ArtNet {
 		std::vector<std::chrono::duration<double>> networkTimeDelta{9};
 
 		std::mutex dmxRenderPass;
-		std::atomic<bool> renderReady = true;
+		std::atomic<bool> renderReady{true};
 		
 		public:
-		std::atomic<bool> running = true;
+		std::atomic<bool> running{true};
 		int Universes = 3;
 		int Channels = 1560;
 		std::vector<uint8_t> dmxData;

@@ -1,5 +1,9 @@
+#include <iostream>
+#include <ranges>
+
 #include "artnet.hpp"
 #include "oscsend.hpp"
+
 
 namespace ArtNet {
 
