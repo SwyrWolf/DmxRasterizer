@@ -7,8 +7,8 @@
 
 Shader::Shader(const std::string& vertexPath, const std::string& fragmentPath) {
 	// Compile shaders
-	uint32_t vertex = compileShader(vertexPath, GL_VERTEX_SHADER);
-	uint32_t fragment = compileShader(fragmentPath, GL_FRAGMENT_SHADER);
+	uint32_t vertex = compileFromFile(vertexPath, GL_VERTEX_SHADER);
+	uint32_t fragment = compileFromFile(fragmentPath, GL_FRAGMENT_SHADER);
 
 	ID = glCreateProgram();
 	glAttachShader(ID, vertex);
@@ -28,6 +28,19 @@ Shader::Shader(const std::string& vertexPath, const std::string& fragmentPath) {
 	// Delete shaders as they are no longer needed after linking
 	glDeleteShader(vertex);
 	glDeleteShader(fragment);
+}
+
+Shader::Shader(std::string_view vertexSrc, std::string_view fragmentSrc) {
+    uint32_t vertex   = compileFromSrc(vertexSrc, GL_VERTEX_SHADER);
+    uint32_t fragment = compileFromSrc(fragmentSrc, GL_FRAGMENT_SHADER);
+
+    ID = glCreateProgram();
+    glAttachShader(ID, vertex);
+    glAttachShader(ID, fragment);
+    glLinkProgram(ID);
+
+    glDeleteShader(vertex);
+    glDeleteShader(fragment);
 }
 
 void Shader::use() const {
@@ -50,7 +63,28 @@ void Shader::setFloatArray(const std::string& name, const float* values, int siz
 	glUniform1fv(location, size, values);
 }
 
-uint32_t Shader::compileShader(const std::string& relativePath, GLenum type) {
+uint32_t Shader::compileFromSrc(std::string_view source, GLenum type)
+{
+	const char* src = source.data();
+
+	uint32_t shader = glCreateShader(type);
+	glShaderSource(shader, 1, &src, nullptr);
+	glCompileShader(shader);
+
+	int success;
+	char infoLog[512];
+	glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
+	if (!success) {
+		glGetShaderInfoLog(shader, 512, nullptr, infoLog);
+		std::cerr << "ERROR::SHADER::COMPILATION_FAILED::"
+							<< (type == GL_VERTEX_SHADER ? "VERTEX" : "FRAGMENT")
+							<< "\n" << infoLog << std::endl;
+	}
+
+	return shader;
+}
+
+uint32_t Shader::compileFromFile(const std::string& relativePath, GLenum type) {
 
 	std::filesystem::path exePath = std::filesystem::current_path();
 	std::filesystem::path shaderPath = exePath / relativePath;

@@ -230,9 +230,10 @@ int main(int argc, char* argv[]) {
 	glTexImage1D(GL_TEXTURE_1D, 0, GL_R32F, dmxLogger.Channels, 0, GL_RED, GL_FLOAT, dmxLogger.dmxDataNormalized.data());
 	glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	
-	std::string fragShader = "shaders/frag.glsl";
-	if (NineChannels) { fragShader = "shaders/frag9.glsl"; }
-	Shader shader("shaders/vertex.glsl", fragShader);
+	std::string_view fragShader = NineChannels ? frag9_src : frag_src;
+	std::string_view vertexShader = vertex_src;
+	// if (NineChannels) { fragShader = "shaders/frag9.glsl"; }
+	Shader shader(vertexShader, fragShader);
 	glUseProgram(shader.ID);
 	glUniform2f(glGetUniformLocation(shader.ID, "resolution"), RENDER_WIDTH, RENDER_HEIGHT);
 	float vertices[] = {
