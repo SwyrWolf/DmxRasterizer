@@ -15,6 +15,16 @@
 #include "artnet.hpp"
 #include "oscsend.hpp"
 
+constexpr char vertex_src[] = {
+	#embed "../shaders/vertex.glsl"
+};
+constexpr char frag_src[] = {
+	#embed "../shaders/frag.glsl"
+};
+constexpr char frag9_src[] = {
+	#embed "../shaders/frag9.glsl"
+};
+
 GLuint dmxDataTexture;
 
 auto RENDER_HEIGHT = ArtNet::H_RENDER_HEIGHT;
