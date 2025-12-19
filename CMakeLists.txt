@@ -38,6 +38,8 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(spout2)
 
+add_compile_options(-Wno-c23-extensions)
+
 add_library(glad STATIC src/external/vendor/glad.c)
 target_include_directories(glad PUBLIC src/external/vendor)
 
