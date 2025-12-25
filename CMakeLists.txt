@@ -11,19 +11,6 @@ set(APP_ICO "${CMAKE_SOURCE_DIR}/src/resource/icon.rc")
 
 include(FetchContent)
 
-option(WERELIB_LOCAL "Use local Werelib" OFF)
-if(WERELIB_LOCAL)
-	if(NOT DEFINED WERELIB_SRC)
-		message(FATAL_ERROR "Please define WERELIB_SRC (`-DWERELIB_SRC=/path/to/Werelib)")
-	endif()
-	message(STATUS "Using local Werelib.")
-	FetchContent_Declare(
-		Werelib
-		SOURCE_DIR ${WERELIB_SRC}
-	)
-	FetchContent_MakeAvailable(Werelib)
-endif()
-
 FetchContent_Declare(
 	glfw
 	GIT_REPOSITORY https://github.com/glfw/glfw.git
@@ -38,6 +25,11 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(spout2)
 
+set(MODULE_FILES
+	src/external/werelib/weretype.cppm
+	src/shader.cppm
+)
+
 add_compile_options(-Wno-c23-extensions)
 
 add_library(glad STATIC src/external/vendor/glad.c)
@@ -45,6 +37,12 @@ target_include_directories(glad PUBLIC src/external/vendor)
 
 file(GLOB SOURCE_FILES src/*.cpp) # Grab all .cpp files from src folder
 add_executable(${PROJECT_NAME} ${SOURCE_FILES} ${APP_ICO})
+
+target_sources(${PROJECT_NAME}
+	PRIVATE
+	FILE_SET cxx_modules TYPE CXX_MODULES FILES
+		${MODULE_FILES}
+)
 
 target_include_directories(${PROJECT_NAME} PRIVATE
 	${glfw_SOURCE_DIR}/include/GLFW

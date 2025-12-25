@@ -2,8 +2,6 @@
 #include <windows.h>
 
 #include <iostream>
-#include <array>
-#include <cstdint>
 #include <unordered_map>
 #include <thread>
 
@@ -11,9 +9,10 @@
 #include <glfw3.h>
 #include <SpoutGL/SpoutSender.h>
 
-#include "shader.hpp"
 #include "artnet.hpp"
 #include "oscsend.hpp"
+
+import shader;
 
 constexpr char vertex_src[] = {
 	#embed "../shaders/vertex.glsl"
@@ -47,7 +46,7 @@ void renderLoop(GLFWwindow* window, ArtNet::UniverseLogger& logger, Shader& shad
 		// Update the DMX data into texture
 		glBindTexture(GL_TEXTURE_1D, dmxDataTexture);
 		glTexSubImage1D(GL_TEXTURE_1D, 0, 0, logger.Channels, GL_RED, GL_FLOAT, logger.dmxDataNormalized.data());
-		
+
 		// Rendering
 		glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
 		glViewport(0, 0, RENDER_WIDTH, RENDER_HEIGHT);
@@ -59,7 +58,7 @@ void renderLoop(GLFWwindow* window, ArtNet::UniverseLogger& logger, Shader& shad
 		
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_1D, dmxDataTexture);
-		glUniform1i(glGetUniformLocation(shader.ID, "dmxDataTexture"), 0);
+		glUniform1i(glGetUniformLocation(shader.m_ID, "dmxDataTexture"), 0);
 		
 		glDrawArrays(GL_TRIANGLES, 0, 6);
 		sender.SendTexture(texture, GL_TEXTURE_2D, RENDER_WIDTH, RENDER_HEIGHT);
@@ -74,7 +73,7 @@ void renderLoop(GLFWwindow* window, ArtNet::UniverseLogger& logger, Shader& shad
 			
 			glActiveTexture(GL_TEXTURE0);
 			glBindTexture(GL_TEXTURE_1D, dmxDataTexture);
-			glUniform1i(glGetUniformLocation(shader.ID, "dmxDataTexture"), 0);
+			glUniform1i(glGetUniformLocation(shader.m_ID, "dmxDataTexture"), 0);
 			
 			glDrawArrays(GL_TRIANGLES, 0, 6);
 			
@@ -96,7 +95,7 @@ int main(int argc, char* argv[]) {
 	bool oscArg = false;
 	int port = 6454;
 	std::optional<std::string> bindIp;
-	std::string Version = "v0.8.1";
+	std::string Version = "v0.8.2";
 	bool NineChannels = false;
 
 	enum ArgType {VERSION, PORT, DEBUG, VERTICAL, OSCSEND, BINDIP, CH9, UNKNOWN };
@@ -232,10 +231,9 @@ int main(int argc, char* argv[]) {
 	
 	std::string_view fragShader = NineChannels ? frag9_src : frag_src;
 	std::string_view vertexShader = vertex_src;
-	// if (NineChannels) { fragShader = "shaders/frag9.glsl"; }
 	Shader shader(vertexShader, fragShader);
-	glUseProgram(shader.ID);
-	glUniform2f(glGetUniformLocation(shader.ID, "resolution"), RENDER_WIDTH, RENDER_HEIGHT);
+	glUseProgram(shader.m_ID);
+	glUniform2f(glGetUniformLocation(shader.m_ID, "resolution"), RENDER_WIDTH, RENDER_HEIGHT);
 	float vertices[] = {
 		-1.0f,  1.0f,  0.0f, 1.0f, // Top-left
 		-1.0f, -1.0f,  0.0f, 0.0f, // Bottom-left
