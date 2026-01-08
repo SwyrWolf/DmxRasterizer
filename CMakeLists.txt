@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 4.2.0)
-project(DmxRasterizer VERSION 0.7.0)
+project(DmxRasterizer VERSION 0.8.3)
 
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -28,6 +28,7 @@ FetchContent_MakeAvailable(spout2)
 set(MODULE_FILES
 	src/external/werelib/weretype.cppm
 	src/shader.cppm
+	src/artnet.cppm
 )
 
 add_compile_options(-Wno-c23-extensions)

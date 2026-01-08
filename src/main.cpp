@@ -9,10 +9,10 @@
 #include <glfw3.h>
 #include <SpoutGL/SpoutSender.h>
 
-#include "artnet.hpp"
 #include "oscsend.hpp"
 
 import shader;
+import artnet;
 
 constexpr char vertex_src[] = {
 	#embed "../shaders/vertex.glsl"
@@ -67,7 +67,7 @@ void renderLoop(GLFWwindow* window, ArtNet::UniverseLogger& logger, Shader& shad
 			glBindFramebuffer(GL_FRAMEBUFFER, 0);
 			glViewport(0, 0, RENDER_WIDTH, RENDER_HEIGHT);
 			glClear(GL_COLOR_BUFFER_BIT);
-			
+		
 			shader.use();
 			glBindVertexArray(VAO);
 			
@@ -78,7 +78,7 @@ void renderLoop(GLFWwindow* window, ArtNet::UniverseLogger& logger, Shader& shad
 			glDrawArrays(GL_TRIANGLES, 0, 6);
 			
 			glfwSwapBuffers(window);  // Display the rendered image
-    }
+		}
 	}
 	glfwMakeContextCurrent(nullptr);
 	glDeleteTextures(1, &texture);
