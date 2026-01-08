@@ -7,7 +7,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 message(STATUS "Using C++ standard: ${CMAKE_CXX_STANDARD}")
 
-set(APP_ICO "${CMAKE_SOURCE_DIR}/src/resource/icon.rc")
+set(APP_ICO "${CMAKE_SOURCE_DIR}/resource/icon.rc")
 
 include(FetchContent)
 
