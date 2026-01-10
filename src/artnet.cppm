@@ -13,6 +13,8 @@ module;
 #include "oscsend.hpp"
 
 export module artnet;
+import net.artnet;
+import appState;
 import weretype;
 
 export namespace ArtNet {
@@ -33,11 +35,12 @@ export namespace ArtNet {
 
 	class UniverseLogger {
 	public:
-		std::atomic<bool> running{true};
-		int Universes = 3;
-		int Channels = 1560;
+		int Universes{3};
+		int Channels{1560};
 		std::vector<u8> dmxData;
 		std::vector<f32> dmxDataNormalized;
+		artnet::DmxIO dmxIO{};
+		artnet::GridNode gridNode{};
 
 		void MeasureTimeDelta(byte universeID) {
 			auto now = std::chrono::steady_clock::now();
@@ -52,7 +55,7 @@ export namespace ArtNet {
 
 		auto GetTimeDeltasMs() {
 			 return networkTimeDelta
-				 | std::views::transform([](const auto& i) { return i.count() * 1000; });
+				| std::views::transform([](const auto& i) { return i.count() * 1000; });
 		}
 	
 		void signalRender() {
@@ -141,8 +144,8 @@ export SOCKET setupArtNetSocket(int port, const std::optional<std::string>& bind
 	return sock;
 }
 
-export void receiveArtNetData(SOCKET sock, std::span<byte> dmxData, ArtNet::UniverseLogger& logger) {
-	while (logger.running) {
+export void receiveArtNetData(SOCKET sock, std::span<u8> dmxData, ArtNet::UniverseLogger& logger) {
+	while (app::running) {
 		std::array<char, 1024> buffer{};
 		sockaddr_in senderAddr{};
 		int senderAddrSize = sizeof(senderAddr);
@@ -153,6 +156,18 @@ export void receiveArtNetData(SOCKET sock, std::span<byte> dmxData, ArtNet::Univ
 			std::cerr << "Failed to receive UDP packet. Error: " << error << std::endl;
 			return;
 		}
+
+		std::span<u8> buf{raw<u8*>(buffer.data()), buffer.size()};
+		auto res = logger.dmxIO.ProcessPacket(buf);
+		if (!res) { 
+			std::cerr << "net.Artnet failed! \n"; 
+		} else {
+			auto r = logger.gridNode.set(res.value(), logger.dmxIO.Read());
+			if (!r) { 
+				std::cerr << "net.Artnet failed at step 2\n"; 
+			}
+		}
+
 		
 		if (bytesReceived > 18 && std::strncmp(buffer.data(), "Art-Net", 7) == 0) {
 			u16 universeID = buffer[14] | (buffer[15] << 8);

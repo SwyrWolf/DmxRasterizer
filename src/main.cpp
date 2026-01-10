@@ -4,6 +4,7 @@
 #include <iostream>
 #include <unordered_map>
 #include <thread>
+#include <ranges>
 
 #include "./external/vendor/glad.h"
 #include <glfw3.h>
@@ -13,6 +14,8 @@
 
 import shader;
 import artnet;
+import weretype;
+import appState;
 
 constexpr char vertex_src[] = {
 	#embed "../shaders/vertex.glsl"
@@ -31,16 +34,13 @@ auto RENDER_WIDTH = ArtNet::H_RENDER_WIDTH;
 auto RENDER_COLUMNS = ArtNet::H_GRID_COLUMNS;
 auto RENDER_ROWS = ArtNet::H_GRID_ROWS;
 
-bool debug = false;
-
 void renderLoop(GLFWwindow* window, ArtNet::UniverseLogger& logger, Shader& shader, GLuint VAO, GLuint dmxDataTexture, SpoutSender& sender, GLuint framebuffer, GLuint texture) {
-	
 	glfwMakeContextCurrent(window);
 	
-	while (logger.running) {
+	while (app::running) {
 		logger.waitForRender();
-		for (int i = 0; i < logger.Channels; ++i) {
-			logger.dmxDataNormalized[i] = logger.dmxData[i] / 255.0f;
+		for (auto&& [src, dst] : std::views::zip(logger.dmxData, logger.dmxDataNormalized)) {
+			dst = as<f32>(src) / 255.0f;
 		}
 		
 		// Update the DMX data into texture
@@ -63,7 +63,7 @@ void renderLoop(GLFWwindow* window, ArtNet::UniverseLogger& logger, Shader& shad
 		glDrawArrays(GL_TRIANGLES, 0, 6);
 		sender.SendTexture(texture, GL_TEXTURE_2D, RENDER_WIDTH, RENDER_HEIGHT);
 		
-    if (debug) {
+    if (app::debugMode) {
 			glBindFramebuffer(GL_FRAMEBUFFER, 0);
 			glViewport(0, 0, RENDER_WIDTH, RENDER_HEIGHT);
 			glClear(GL_COLOR_BUFFER_BIT);
@@ -90,13 +90,7 @@ void renderLoop(GLFWwindow* window, ArtNet::UniverseLogger& logger, Shader& shad
 
 int main(int argc, char* argv[]) {
 	ArtNet::UniverseLogger dmxLogger;
-	
-	bool vertical = false;
-	bool oscArg = false;
-	int port = 6454;
 	std::optional<std::string> bindIp;
-	std::string Version = "v0.8.2";
-	bool NineChannels = false;
 
 	enum ArgType {VERSION, PORT, DEBUG, VERTICAL, OSCSEND, BINDIP, CH9, UNKNOWN };
 	std::unordered_map<std::string, ArgType> argMap = {
@@ -122,28 +116,28 @@ int main(int argc, char* argv[]) {
 			
 			switch (argType) {
 				case VERSION:
-				std::cout << "DMX Rasterizer: " << Version << std::endl;
+				std::cout << "DMX Rasterizer: " << app::Version << std::endl;
 				break;
 				case PORT:
 				if (i + 1 < argc) {
 					try {
-						port = std::stoi(argv[++i]);
-						if (port < 1 || port > 65535) {
+						app::port = std::stoi(argv[++i]);
+						if (app::port < 1 || app::port > 65535) {
 							throw std::out_of_range("Port out of valid range");
 						}
 					} catch (const std::exception& e) {
 						std::cerr << "Error: Missing value for " << arg << " flag." << std::endl;
-						std::cerr << "using default port: " << port << std::endl;
+						std::cerr << "using default port: " << app::port << std::endl;
 					}
 					break;
 				}
 				
 				case DEBUG:
-				debug = true;
+				app::debugMode = true;
 				break;
 				
 				case VERTICAL:
-				vertical = true;
+				app::verticalMode = true;
 				RENDER_HEIGHT = ArtNet::V_RENDER_HEIGHT;
 				RENDER_WIDTH = ArtNet::V_RENDER_WIDTH;
 				RENDER_COLUMNS = ArtNet::V_GRID_COLUMNS;
@@ -162,7 +156,7 @@ int main(int argc, char* argv[]) {
 					if (InetPtonA(AF_INET, ip.c_str(), &testAddr) != 1) {
 						std::cerr << "Warning: Invalid IP format: " << ip << "\n";
 					} else {
-						bindIp = ip;
+						app::bindIp.emplace(ip);
 					}
 				} else {
 					std::cerr << "Error: Missing IP address after --bind\n";
@@ -170,7 +164,7 @@ int main(int argc, char* argv[]) {
 				break;
 				
 				case CH9:
-				NineChannels = true;
+				app::nineMode = true;
 				dmxLogger.Universes = 9;
 				dmxLogger.Channels = ArtNet::TOTAL_DMX_CHANNELS * 3;
 				std::cout << "RGB mode on\n";
@@ -203,7 +197,7 @@ int main(int argc, char* argv[]) {
 	}
 	
 	
-	if(!debug){
+	if(!app::debugMode){
 		glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
 	}
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
@@ -229,7 +223,7 @@ int main(int argc, char* argv[]) {
 	glTexImage1D(GL_TEXTURE_1D, 0, GL_R32F, dmxLogger.Channels, 0, GL_RED, GL_FLOAT, dmxLogger.dmxDataNormalized.data());
 	glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	
-	std::string_view fragShader = NineChannels ? frag9_src : frag_src;
+	std::string_view fragShader = app::nineMode ? frag9_src : frag_src;
 	std::string_view vertexShader = vertex_src;
 	Shader shader(vertexShader, fragShader);
 	glUseProgram(shader.m_ID);
@@ -256,7 +250,7 @@ int main(int argc, char* argv[]) {
 	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
 	glEnableVertexAttribArray(1);
 	
-	SOCKET artNetSocket = setupArtNetSocket(port, bindIp);
+	SOCKET artNetSocket = setupArtNetSocket(app::port, bindIp);
 	
 	std::span<byte> dmxSpan(dmxLogger.dmxData);
 	std::thread artNetThread(receiveArtNetData, artNetSocket, dmxSpan, std::ref(dmxLogger));
@@ -283,7 +277,7 @@ int main(int argc, char* argv[]) {
 		glfwPollEvents();
 	}
 	
-	dmxLogger.running = false;
+	app::running = false;
 	dmxLogger.signalRender();
 	
 	closesocket(artNetSocket);
