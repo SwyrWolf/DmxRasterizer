@@ -20,39 +20,39 @@ export namespace artnet {
 
 	// --- Art-Net operation codes ---
 	enum class Op : u16 {
-		Poll                = 0x2000, // This is an ArtPoll m_packet, no other data is contained in this UDP m_packet.
-		PollReply           = 0x2100, // This is an ArtPollReply Packet. It contains device status information.
+		Poll                = 0x2000, // ArtPoll m_packet, no other data is contained in this UDP m_packet.
+		PollReply           = 0x2100, // ArtPollReply Packet. It contains device status information.
 		DiagData            = 0x2300, // Diagnostics and data logging m_packet.
-		Command             = 0x2400, // This is an ArtCommand m_packet. It is used to send text based parameter commands.
-		DataRequest         = 0x2700, // This is an ArtDataRequest m_packet. It is used to request data such as products URLs.
+		Command             = 0x2400, // ArtCommand m_packet. It is used to send text based parameter commands.
+		DataRequest         = 0x2700, // ArtDataRequest m_packet. It is used to request data such as products URLs.
 		DataReply           = 0x2800, // his is an ArtDataReply m_packet. It is used to reply to ArtDataRequest m_packets.
-		Dmx                 = 0x5000, // This is an ArtDmx data m_packet. It contains zero start code DMX512 information for a single Universe.
-		Nzs                 = 0x5100, // This is an ArtNzs data m_packet. It contains non-zero start code (except RDM) DMX512 information for a single Universe.
-		Sync                = 0x5200, // This is an ArtSync data m_packet. It is used to force synchronous transfer of ArtDmx m_packets to a node’s output.
-		Address             = 0x6000, // This is an ArtAddress m_packet. It contains remote programming information for a Node.
-		Input               = 0x7000, // This is an ArtInput m_packet. It contains enable – disable data for DMX inputs.
-		TodRequest          = 0x8000, // This is an ArtTodRequest m_packet. It is used to request a Table of Devices (ToD) for RDM discovery.
-		TodData             = 0x8100, // This is an ArtTodData m_packet. It is used to send a Table of Devices (ToD) for RDM discovery.
-		TodControl          = 0x8200, // This is an ArtTodControl m_packet. It is used to send RDM discovery control messages.
-		Rdm                 = 0x8300, // This is an ArtRdm m_packet. It is used to send all non discovery RDM messages.
-		RdmSub              = 0x8400, // This is an ArtRdmSub m_packet. It is used to send compressed, RDM Sub-Device data.
-		VideoSetup          = 0xa010, // This is an ArtVideoSetup m_packet. It contains video screen setup information for nodes that implement the extended video features.
-		VideoPalette        = 0xa020, // This is an ArtVideoPalette m_packet. It contains colour palette setup information for nodes that implement the extended video features.
-		VideoData           = 0xa040, // This is an ArtVideoData m_packet. It contains display data for nodes that implement the extended video features.
+		Dmx                 = 0x5000, // ArtDmx data m_packet. It contains zero start code DMX512 information for a single Universe.
+		Nzs                 = 0x5100, // ArtNzs data m_packet. It contains non-zero start code (except RDM) DMX512 information for a single Universe.
+		Sync                = 0x5200, // ArtSync data m_packet. It is used to force synchronous transfer of ArtDmx m_packets to a node’s temp_BinaryPacketput.
+		Address             = 0x6000, // ArtAddress m_packet. It contains remote programming information for a Node.
+		Input               = 0x7000, // ArtInput m_packet. It contains enable – disable data for DMX inputs.
+		TodRequest          = 0x8000, // ArtTodRequest m_packet. It is used to request a Table of Devices (ToD) for RDM discovery.
+		TodData             = 0x8100, // ArtTodData m_packet. It is used to send a Table of Devices (ToD) for RDM discovery.
+		TodControl          = 0x8200, // ArtTodControl m_packet. It is used to send RDM discovery control messages.
+		Rdm                 = 0x8300, // ArtRdm m_packet. It is used to send all non discovery RDM messages.
+		RdmSub              = 0x8400, // ArtRdmSub m_packet. It is used to send compressed, RDM Sub-Device data.
+		VideoSetup          = 0xa010, // ArtVideoSetup m_packet. It contains video screen setup information for nodes that implement the extended video features.
+		VideoPalette        = 0xa020, // ArtVideoPalette m_packet. It contains colour palette setup information for nodes that implement the extended video features.
+		VideoData           = 0xa040, // ArtVideoData m_packet. It contains display data for nodes that implement the extended video features.
 		MacMaster           = 0xf000, // This m_packet is deprecated.
 		MacSlave            = 0xf100, // This m_packet is deprecated.
-		FirmwareMaster      = 0xf200, // This is an ArtFirmwareMaster m_packet. It is used to upload new firmware or firmware extensions to the Node.
-		FirmwareReply       = 0xf300, // This is an ArtFirmwareReply m_packet. It is returned by the node to acknowledge receipt of an ArtFirmwareMaster m_packet or ArtFileTnMaster m_packet.
+		FirmwareMaster      = 0xf200, // ArtFirmwareMaster m_packet. It is used to upload new firmware or firmware extensions to the Node.
+		FirmwareReply       = 0xf300, // ArtFirmwareReply m_packet. It is returned by the node to acknowledge receipt of an ArtFirmwareMaster m_packet or ArtFileTnMaster m_packet.
 		FileTnMaster        = 0xf400, // Uploads user file to node.
 		FileFnMaster        = 0xf500, // Downloads user file from node.
 		FileFnReply         = 0xf600, // Server to Node acknowledge for download m_packets.
-		IpProg              = 0xf800, // This is an ArtIpProg m_packet. It is used to reprogramme the IP address and Mask of the Node.
-		IpProgReply         = 0xf900, // This is an ArtIpProgReply m_packet. It is returned by the node to acknowledge receipt of an ArtIpProg m_packet.
-		Media               = 0x9000, // This is an ArtMedia m_packet. It is Unicast by a Media Server and acted upon by a Controller.
-		MediaPatch          = 0x9100, // This is an ArtMediaPatch m_packet. It is Unicast by a Controller and acted upon by a Media Server.
-		MediaControl        = 0x9200, // This is an ArtMediaControl m_packet. It is Unicast by a Controller and acted upon by a Media Server.
-		MediaContrlReply    = 0x9300, // This is an ArtMediaControlReply m_packet. It is Unicast by a Media Server and acted upon by a Controller.
-		TimeCode            = 0x9700, // This is an ArtTimeCode m_packet. It is used to transport time code over the network.
+		IpProg              = 0xf800, // ArtIpProg m_packet. It is used to reprogramme the IP address and Mask of the Node.
+		IpProgReply         = 0xf900, // ArtIpProgReply m_packet. It is returned by the node to acknowledge receipt of an ArtIpProg m_packet.
+		Media               = 0x9000, // ArtMedia m_packet. It is Unicast by a Media Server and acted upon by a Controller.
+		MediaPatch          = 0x9100, // ArtMediaPatch m_packet. It is Unicast by a Controller and acted upon by a Media Server.
+		MediaControl        = 0x9200, // ArtMediaControl m_packet. It is Unicast by a Controller and acted upon by a Media Server.
+		MediaContrlReply    = 0x9300, // ArtMediaControlReply m_packet. It is Unicast by a Media Server and acted upon by a Controller.
+		TimeCode            = 0x9700, // ArtTimeCode m_packet. It is used to transport time code over the network.
 		TimeSync            = 0x9800, // Used to synchronise real time date and clock.
 		Trigger             = 0x9900, // Used to send trigger macros.
 		Directory           = 0x9a00, // Requests a node's file list.
@@ -75,14 +75,14 @@ export namespace artnet {
 		Med         = 0x40, // Medium priority message.
 		High        = 0x80, // High priority message.
 		Critical    = 0xe0, // Critical priority message.
-		Volatile    = 0xf0, // Volatile message. Messages of this type are displayed on a single line in the DMX-Workshop diagnostics display. All other types are displayed in a list box.
+		Volatile    = 0xf0, // Displayed in a single line in DMX-Workshop diagnostics display. All other types are displayed in a list box.
 	};
 
 	constexpr std::size_t MIN_PACKET_SIZE = 18;
 	constexpr std::size_t MAX_PACKET_SIZE = 1024;
 
 	#pragma pack(push, 1)
-	struct DMX_Packet {
+	struct DMX_BinaryPacket {
 		std::array<u8, 8> signature; // [0-7] Always "Art-Net,0x00"
 		Op operation;                // [8-9] The OpCode defines the class of data within this UDP m_packet.
 		u16 version;                 // [10-11] Always "0x000E" or "14"
@@ -117,28 +117,28 @@ export namespace artnet {
 				return std::unexpected(Err::InvalidPacketSize);
 			}
 
-			DMX_Packet out{};
+			DMX_BinaryPacket temp_BinaryPacket{};
 			
 			if (std::memcmp(buffer.data(), &ARTNET_SIGNATURE, 8) != 0) {
 				return std::unexpected(Err::InvalidSignature);
 			} else {
-				std::memcpy(&out, buffer.data(), std::min(buffer.size(), sizeof(DMX_Packet)));
+				std::memcpy(&temp_BinaryPacket, buffer.data(), std::min(buffer.size(), sizeof(DMX_BinaryPacket)));
 			}
 
-			if (out.operation != Op::Dmx) {
+			if (temp_BinaryPacket.operation != Op::Dmx) {
 				return std::unexpected(Err::InvalidOpCode);
 			}
 
-			if (out.dmxLength > 512 || (out.dmxLength % 2) != 0) {
+			if (temp_BinaryPacket.dmxLength > 512 || (temp_BinaryPacket.dmxLength % 2) != 0) {
 				return std::unexpected(Err::InvalidDmxLength);
 			}
 
-			m_packet = out;
-			return { out.universeID };
+			m_packet = temp_BinaryPacket;
+			return { temp_BinaryPacket.universeID };
 		}
 		
 		private:
-		DMX_Packet m_packet{};
+		DMX_BinaryPacket m_packet{};
 	};
 
 
@@ -149,23 +149,26 @@ export namespace artnet {
 		using Storage = std::array<u8, UniverseBytes * Universes>;
 		using GridView = std::mdspan<u8, std::extents<std::size_t, UniverseBytes, Universes>>;
 
-		~GridNode() noexcept = default;
 		GridNode() noexcept = default;
+		~GridNode() noexcept = default;
 
-		GridNode(const GridNode&) = default;
+		GridNode(const GridNode&) = delete;
 		GridNode& operator=(const GridNode&) = delete;
 		GridNode(GridNode&& other) = delete;
 		GridNode& operator=(const GridNode&&) = delete;
 
-		[[nodiscard]] auto grid() noexcept -> GridView {
+		[[nodiscard]]
+		auto grid() noexcept -> GridView {
 			return GridView{ m_data.data() };
 		}
 
-		[[nodiscard]] auto bytes() noexcept -> std::span<u8> {
+		[[nodiscard]]
+		auto bytes() noexcept -> std::span<u8> {
 			return { m_data.data(), m_data.size() };
 		}
 
-		[[nodiscard]] auto set(u16 universe, std::span<const u8> data) noexcept -> bool {
+		[[nodiscard]]
+		auto set(u16 universe, std::span<const u8> data) noexcept -> bool {
 			if (universe >= Universes) {
 				std::cerr << "Universe too large\n";
 				return false;

@@ -36,6 +36,10 @@ set(MODULE_FILES
 
 	src/mod/net/artnet.cppm
 	src/mod/net/winsock.cppm
+	
+	src/mod/render/render.cppm
+	
+	src/mod/logging.cppm
 )
 add_library(glad STATIC src/external/vendor/glad.c)
 target_include_directories(glad PUBLIC src/external/vendor)
