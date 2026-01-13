@@ -4,6 +4,7 @@ module;
 #include <expected>
 #include <optional>
 #include <span>
+#include <memory>
 #include <winsock2.h>
 #include <ws2tcpip.h>
 
@@ -11,20 +12,18 @@ export module net.winsock;
 import appState;
 import weretype;
 
-namespace winsock {
+export namespace winsock {
 
 	enum class SOCK : int {
 		TCP = SOCK_STREAM,		// 1 : stream socket
 		UDP = SOCK_DGRAM,			// 2 : datagram socket
 		RAW = SOCK_RAW,				// 3 : raw-protocol interface
 		RDM = SOCK_RDM, 			// 4 : reliably-delivered message
-		SEQ = SOCK_SEQPACKET,	// 5: sequenced packet stream
+		SEQ = SOCK_SEQPACKET,	// 5 : sequenced packet stream
 	};
 
-	export enum class NetError : int {
-		AlreadyOperational,
-		OperationalFailed,
-		NotOperational,
+	enum class NetError : int {
+		WsaStartupFailure,
 		SocketAlreadyOpen,
 		CreationFailed,
 		OptionsFailed,
@@ -35,7 +34,7 @@ namespace winsock {
 		RecvFailure,
 	};
 
-	export auto ip_str_u32(const std::string& str) -> std::expected<u32, NetError> {
+	auto ipv4_strToU32(const std::string& str) -> std::expected<u32, NetError> {
 		u32 addr_net{};
 		if (InetPtonA(AF_INET, str.c_str(), &addr_net) != 1) {
 			return std::unexpected(NetError::InvalidIP);
@@ -43,45 +42,26 @@ namespace winsock {
 		return ntohl(addr_net);
 	}
 
-	class NetOperational {
+	class NetworkState {
 	public:
-		[[nodiscard]] bool Operational() const { return m_operational; }
-		[[nodiscard]] const WSADATA* get() const { return &m_wsaData; }
-
-		auto InitOperational() -> std::expected<void, NetError> {
-			if (m_operational) return std::unexpected(NetError::AlreadyOperational);
-			if (WSAStartup(0x0202, &m_wsaData) != 0) return std::unexpected(NetError::OperationalFailed);
-
-			return {};
-		}
-	
-	private:
-		bool m_operational{false};
-		WSADATA m_wsaData;
-	};
-
-	export class NetworkState {
-	public:
-		NetworkState() = default;
-		~NetworkState() {
-			cleanup();
-		}
-
+		
+		~NetworkState() { cleanup(); }
+		
 		NetworkState(const NetworkState&) = delete;
 		NetworkState& operator=(const NetworkState&) = delete;
 		NetworkState(NetworkState&& other) = delete;
 		NetworkState& operator=(const NetworkState&&) = delete;
 
-		void init() {
-			auto result = m_operating.InitOperational();
-			if (!result) {
-				std::cerr << "Failed to create WSA Data! Error Code: " << as<int>(result.error()) << "\n";
-			}
+		[[nodiscard("Expected unique_ptr or Error")]]
+		static auto Create() -> std::expected<std::unique_ptr<NetworkState>, NetError> {
+			std::unique_ptr<NetworkState> state{ new NetworkState() };
+			if (WSAStartup(0x0202, &m_wsaData) != 0) return std::unexpected(NetError::WsaStartupFailure);
+			return state;
 		}
+		
+		[[nodiscard]]
+		auto OpenNetworkSocket(std::optional<u32> ipaddr, u16 port) -> std::expected<void, NetError> {
 
-		auto OpenNetworkSocket(std::optional<u32> ipaddr, u16 port) noexcept -> std::expected<void, NetError> {
-
-			if (!m_operating.Operational()) return std::unexpected(NetError::NotOperational);
 			if (m_openSock != INVALID_SOCKET) return std::unexpected(NetError::SocketAlreadyOpen);
 
 			m_openSock = WSASocketW(AF_INET, SOCK_DGRAM, 0, nullptr, 0, WSA_FLAG_OVERLAPPED);
@@ -156,7 +136,9 @@ namespace winsock {
 		}
 
 	private:
-		NetOperational m_operating{};
+		NetworkState() = default;
+
+		static WSADATA m_wsaData;
 		SOCKET m_openSock{INVALID_SOCKET};
 		bool m_openConnection{false};
 		
@@ -169,11 +151,7 @@ namespace winsock {
 				closesocket(m_openSock);
 				m_openSock = INVALID_SOCKET;
 			}
-
-			if (m_operating.Operational()) {
-				WSACleanup();
-			}
-
+			WSACleanup();
 			m_openConnection = false;
 		}
 	};

@@ -7,6 +7,7 @@ module;
 #include <iostream>
 #include <expected>
 #include <span>
+#include <ranges>
 #include <algorithm>
 #include <mdspan>
 
@@ -145,7 +146,7 @@ export namespace artnet {
 	class GridNode {
 		public:
 		static constexpr std::size_t UniverseBytes = 520;
-		static constexpr std::size_t Universes = 9;
+		static constexpr std::size_t Universes = 3;
 		using Storage = std::array<u8, UniverseBytes * Universes>;
 		using GridView = std::mdspan<u8, std::extents<std::size_t, UniverseBytes, Universes>>;
 
@@ -183,7 +184,14 @@ export namespace artnet {
 			return true;
 		}
 
+		void Normalize() {
+			for (auto&& [src, dst] : std::views::zip(m_data, m_dataNormalized)) {
+				dst = as<f32>(src) / 255.0f;
+			}
+		}
+
 		private:
 		Storage m_data{0};
+		Storage m_dataNormalized{0};
 	};
 }
