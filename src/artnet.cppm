@@ -6,14 +6,12 @@ module;
 #include <chrono>
 #include <mutex>
 #include <atomic>
+#include <ranges>
 
 #include <winsock2.h>
 #include <ws2tcpip.h>
 
-#include "oscsend.hpp"
-
 export module artnet;
-import net.artnet;
 import appState;
 import weretype;
 
@@ -39,8 +37,6 @@ export namespace ArtNet {
 		int Channels{1560};
 		std::vector<u8> dmxData;
 		std::vector<f32> dmxDataNormalized;
-		artnet::DmxIO dmxIO{};
-		artnet::GridNode gridNode{};
 
 		void MeasureTimeDelta(byte universeID) {
 			auto now = std::chrono::steady_clock::now();
@@ -157,16 +153,16 @@ export void receiveArtNetData(SOCKET sock, std::span<u8> dmxData, ArtNet::Univer
 			return;
 		}
 
-		std::span<u8> buf{raw<u8*>(buffer.data()), buffer.size()};
-		auto res = logger.dmxIO.ProcessPacket(buf);
-		if (!res) { 
-			std::cerr << "net.Artnet failed! \n"; 
-		} else {
-			auto r = logger.gridNode.set(res.value(), logger.dmxIO.Read());
-			if (!r) { 
-				std::cerr << "net.Artnet failed at step 2\n"; 
-			}
-		}
+		// std::span<u8> buf{raw<u8*>(buffer.data()), buffer.size()};
+		// auto res = logger.dmxIO.ProcessPacket(buf);
+		// if (!res) { 
+		// 	std::cerr << "net.Artnet failed! \n"; 
+		// } else {
+		// 	auto r = logger.gridNode.set(res.value(), logger.dmxIO.Read());
+		// 	if (!r) { 
+		// 		std::cerr << "net.Artnet failed at step 2\n"; 
+		// 	}
+		// }
 
 		
 		if (bytesReceived > 18 && std::strncmp(buffer.data(), "Art-Net", 7) == 0) {
@@ -182,13 +178,6 @@ export void receiveArtNetData(SOCKET sock, std::span<u8> dmxData, ArtNet::Univer
 				int universeOffset = (universeID * ArtNet::VRSL_UNIVERSE_GRID);
 				if (universeOffset + dmxDataLength <= logger.Channels) {
 					std::memcpy(&dmxData[universeOffset], dmxStart.data(), dmxDataLength);
-
-					if (OSC::client.getToggle()) {
-						// OSC::client.sendOSCBundle(dmxArray, universeOffset);
-						for (auto [index, value] : dmxData | std::views::enumerate) {
-							OSC::client.sendOSCMessage(index, value);
-						}
-					}
 				}
 
 				logger.MeasureTimeDelta(universeID);

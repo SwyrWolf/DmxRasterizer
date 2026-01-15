@@ -26,7 +26,6 @@ FetchContent_MakeAvailable(spout2)
 
 set(SOURCE_FILES 
 	src/main.cpp
-	src/oscsend.cpp
 )
 set(MODULE_FILES
 	src/external/werelib/weretype.cppm

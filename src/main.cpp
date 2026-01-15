@@ -4,17 +4,17 @@
 #include <iostream>
 #include <unordered_map>
 #include <thread>
-#include <ranges>
+#include <span>
 
 #include "./external/vendor/glad.h"
 #include <glfw3.h>
 #include <SpoutGL/SpoutSender.h>
+#include <ws2tcpip.h>
 
-#include "oscsend.hpp"
-
+import weretype;
 import shader;
 import artnet;
-import weretype;
+import render;
 import appState;
 
 constexpr char vertex_src[] = {
@@ -34,63 +34,8 @@ auto RENDER_WIDTH = ArtNet::H_RENDER_WIDTH;
 auto RENDER_COLUMNS = ArtNet::H_GRID_COLUMNS;
 auto RENDER_ROWS = ArtNet::H_GRID_ROWS;
 
-void renderLoop(GLFWwindow* window, ArtNet::UniverseLogger& logger, Shader& shader, GLuint VAO, GLuint dmxDataTexture, SpoutSender& sender, GLuint framebuffer, GLuint texture) {
-	glfwMakeContextCurrent(window);
-	
-	while (app::running) {
-		logger.waitForRender();
-		for (auto&& [src, dst] : std::views::zip(logger.dmxData, logger.dmxDataNormalized)) {
-			dst = as<f32>(src) / 255.0f;
-		}
-		
-		// Update the DMX data into texture
-		glBindTexture(GL_TEXTURE_1D, dmxDataTexture);
-		glTexSubImage1D(GL_TEXTURE_1D, 0, 0, logger.Channels, GL_RED, GL_FLOAT, logger.dmxDataNormalized.data());
-
-		// Rendering
-		glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
-		glViewport(0, 0, RENDER_WIDTH, RENDER_HEIGHT);
-		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-		glClear(GL_COLOR_BUFFER_BIT);
-		
-		shader.use();
-		glBindVertexArray(VAO);
-		
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_1D, dmxDataTexture);
-		glUniform1i(glGetUniformLocation(shader.m_ID, "dmxDataTexture"), 0);
-		
-		glDrawArrays(GL_TRIANGLES, 0, 6);
-		sender.SendTexture(texture, GL_TEXTURE_2D, RENDER_WIDTH, RENDER_HEIGHT);
-		
-    if (app::debugMode) {
-			glBindFramebuffer(GL_FRAMEBUFFER, 0);
-			glViewport(0, 0, RENDER_WIDTH, RENDER_HEIGHT);
-			glClear(GL_COLOR_BUFFER_BIT);
-		
-			shader.use();
-			glBindVertexArray(VAO);
-			
-			glActiveTexture(GL_TEXTURE0);
-			glBindTexture(GL_TEXTURE_1D, dmxDataTexture);
-			glUniform1i(glGetUniformLocation(shader.m_ID, "dmxDataTexture"), 0);
-			
-			glDrawArrays(GL_TRIANGLES, 0, 6);
-			
-			glfwSwapBuffers(window);  // Display the rendered image
-		}
-	}
-	glfwMakeContextCurrent(nullptr);
-	glDeleteTextures(1, &texture);
-	glDeleteTextures(1, &dmxDataTexture);
-	glDeleteFramebuffers(1, &framebuffer);
-	glDeleteVertexArrays(1, &VAO);
-	sender.ReleaseSender();
-}
-
 int main(int argc, char* argv[]) {
 	ArtNet::UniverseLogger dmxLogger;
-	std::optional<std::string> bindIp;
 
 	enum ArgType {VERSION, PORT, DEBUG, VERTICAL, OSCSEND, BINDIP, CH9, UNKNOWN };
 	std::unordered_map<std::string, ArgType> argMap = {
@@ -144,11 +89,6 @@ int main(int argc, char* argv[]) {
 				RENDER_ROWS = ArtNet::V_GRID_ROWS;
 				break;
 				
-				case OSCSEND:
-				OSC::client.toggleOSC(true);
-				std::cout << "OSC Enabled" << std::endl;
-				break;
-				
 				case BINDIP:
 				if (i + 1 < argc) {
 					std::string ip = argv[++i];
@@ -178,12 +118,12 @@ int main(int argc, char* argv[]) {
 		}
 	}
 
-	if (!bindIp) {
+	if (!app::bindIp) {
 		int input;
 		std::cout << "Unicase Mode (0 - No | 1 - True)\nInput: ";
 		std::cin >> input;
 
-		bindIp = (input == 0) ? "0.0.0.0"
+		app::bindIp = (input == 0) ? "0.0.0.0"
 			: (input == 1) ? "127.0.0.1"
 			: "0.0.0.0";
 	}
@@ -211,7 +151,7 @@ int main(int argc, char* argv[]) {
 	}
 	glfwMakeContextCurrent(window);
 	
-	if (!gladLoadGLLoader(reinterpret_cast<GLADloadproc>(glfwGetProcAddress))) {
+	if (!gladLoadGLLoader(raw<GLADloadproc>(glfwGetProcAddress))) {
 		std::cerr << "Failed to initialize GLAD" << std::endl;
 		return -1;
 	}
@@ -250,7 +190,7 @@ int main(int argc, char* argv[]) {
 	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
 	glEnableVertexAttribArray(1);
 	
-	SOCKET artNetSocket = setupArtNetSocket(app::port, bindIp);
+	SOCKET artNetSocket = setupArtNetSocket(app::port, app::bindIp);
 	
 	std::span<byte> dmxSpan(dmxLogger.dmxData);
 	std::thread artNetThread(receiveArtNetData, artNetSocket, dmxSpan, std::ref(dmxLogger));
@@ -270,7 +210,7 @@ int main(int argc, char* argv[]) {
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture, 0);
 	
 	glfwMakeContextCurrent(nullptr);
-	std::thread renderThread(renderLoop, window, std::ref(dmxLogger), std::ref(shader), VAO, dmxDataTexture, std::ref(sender), framebuffer, texture);
+	std::thread renderThread(Render::renderLoop, window, std::ref(dmxLogger), std::ref(shader), VAO, dmxDataTexture, std::ref(sender), framebuffer, texture);
 	
 	//Main thread loop
 	while (!glfwWindowShouldClose(window)) {

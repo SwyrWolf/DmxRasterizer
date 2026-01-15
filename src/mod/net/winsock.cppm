@@ -14,6 +14,7 @@ import weretype;
 
 export namespace winsock {
 
+	// Socket types
 	enum class SOCK : int {
 		TCP = SOCK_STREAM,		// 1 : stream socket
 		UDP = SOCK_DGRAM,			// 2 : datagram socket
@@ -22,6 +23,7 @@ export namespace winsock {
 		SEQ = SOCK_SEQPACKET,	// 5 : sequenced packet stream
 	};
 
+	// Error Types
 	enum class NetError : int {
 		WsaStartupFailure,
 		SocketAlreadyOpen,
@@ -34,6 +36,7 @@ export namespace winsock {
 		RecvFailure,
 	};
 
+	// ipv4 string to u32
 	auto ipv4_strToU32(const std::string& str) -> std::expected<u32, NetError> {
 		u32 addr_net{};
 		if (InetPtonA(AF_INET, str.c_str(), &addr_net) != 1) {
@@ -42,16 +45,32 @@ export namespace winsock {
 		return ntohl(addr_net);
 	}
 
+
 	class NetworkState {
-	public:
+	private:
+		NetworkState() = default; // private constructor
+
+		inline static WSADATA m_wsaData;
 		
+		SOCKET m_openSock{INVALID_SOCKET};
+		bool m_openConnection{false};
+		
+		sockaddr_in m_listenAddr{};
+		sockaddr_in m_senderAddr{};
+		int m_senderAddrSize = sizeof(m_senderAddr);
+
+	public:
+		//Public Destructor / No Copy, Move
+		#pragma region [Penta]
 		~NetworkState() { cleanup(); }
 		
 		NetworkState(const NetworkState&) = delete;
 		NetworkState& operator=(const NetworkState&) = delete;
 		NetworkState(NetworkState&& other) = delete;
 		NetworkState& operator=(const NetworkState&&) = delete;
+		#pragma endregion
 
+		// Factory Initialize Winsock 2.2
 		[[nodiscard("Expected unique_ptr or Error")]]
 		static auto Create() -> std::expected<std::unique_ptr<NetworkState>, NetError> {
 			std::unique_ptr<NetworkState> state{ new NetworkState() };
@@ -59,6 +78,7 @@ export namespace winsock {
 			return state;
 		}
 		
+		// Establish a socket connection
 		[[nodiscard]]
 		auto OpenNetworkSocket(std::optional<u32> ipaddr, u16 port) -> std::expected<void, NetError> {
 
@@ -77,7 +97,7 @@ export namespace winsock {
 			}
 
 			m_listenAddr.sin_family = AF_INET;
-			m_listenAddr.sin_port = htons(port);
+			m_listenAddr.sin_port = htons(port); // convert u16 (host)little enedian port input of to (network)big endian 
 
 			if (ipaddr.has_value()) {
 				m_listenAddr.sin_addr.s_addr = htonl(ipaddr.value());
@@ -101,6 +121,7 @@ export namespace winsock {
 			return{};
 		}
 
+		// End socket connection
 		void CloseNetworkSocket() noexcept {
 			if (m_openSock != INVALID_SOCKET) {
 				if (closesocket(m_openSock) == SOCKET_ERROR) {
@@ -123,6 +144,7 @@ export namespace winsock {
 			}
 		}
 
+		// Loopable, listen and wait for UDP packet
 		auto RecieveNetPacket() noexcept -> std::expected<std::span<u8>, NetError> {
 			std::array<u8, 1024> buffer{};
 
@@ -136,16 +158,6 @@ export namespace winsock {
 		}
 
 	private:
-		NetworkState() = default;
-
-		static WSADATA m_wsaData;
-		SOCKET m_openSock{INVALID_SOCKET};
-		bool m_openConnection{false};
-		
-		sockaddr_in m_listenAddr{};
-		sockaddr_in m_senderAddr{};
-		int m_senderAddrSize = sizeof(m_senderAddr);
-
 		void cleanup() noexcept {
 			if (m_openSock != INVALID_SOCKET) {
 				closesocket(m_openSock);
