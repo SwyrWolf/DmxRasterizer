@@ -1,5 +1,6 @@
 #include <winsock2.h>
 #include <windows.h>
+#include <ws2tcpip.h>
 
 #include <iostream>
 #include <unordered_map>
@@ -9,7 +10,9 @@
 #include "./external/vendor/glad.h"
 #include <glfw3.h>
 #include <SpoutGL/SpoutSender.h>
-#include <ws2tcpip.h>
+#include "../../external/vendor/imGui/imgui.h"
+#include "../../external/vendor/imGui/backends/imgui_impl_glfw.h"
+#include "../../external/vendor/imGui/backends/imgui_impl_opengl3.h"
 
 import weretype;
 import shader;
@@ -190,11 +193,12 @@ int main(int argc, char* argv[]) {
 	
 	glfwMakeContextCurrent(nullptr);
 
+	GLFWwindow* uiWindow{nullptr};
 	auto uiWinExp = Render::CreateGUI();
 	if (!uiWinExp) {
 		std::cerr << uiWinExp.error() << "\n";
 	} else {
-		GLFWwindow* uiWindow = *uiWinExp;
+		uiWindow = *uiWinExp;
 	}
 
 	std::thread renderThread(
@@ -212,6 +216,30 @@ int main(int argc, char* argv[]) {
 	//Main thread loop
 	while (!glfwWindowShouldClose(window)) {
 		glfwPollEvents();
+
+		ImGui_ImplOpenGL3_NewFrame();
+    ImGui_ImplGlfw_NewFrame();
+    ImGui::NewFrame();
+
+    // Build UI
+    ImGui::Begin("DMX Rasterizer UI");
+    ImGui::Text("Hello");
+    ImGui::End();
+
+    ImGui::Render();
+
+    glfwMakeContextCurrent(uiWindow);
+
+    int fbw = 0, fbh = 0;
+    glfwGetFramebufferSize(uiWindow, &fbw, &fbh);
+    glViewport(0, 0, fbw, fbh);
+
+    glClearColor(0.12f, 0.12f, 0.12f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT);
+
+    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
+    glfwSwapBuffers(uiWindow);
 	}
 	
 	app::running = false;

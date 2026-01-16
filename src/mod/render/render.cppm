@@ -57,7 +57,7 @@ export namespace Render {
 
 	auto CreateGUI() -> std::expected<GLFWwindow*, std::string> {
 		if (g_uiWindow) {
-				return g_uiWindow;
+			return g_uiWindow;
 		}
 
 		glfwDefaultWindowHints();
@@ -72,20 +72,24 @@ export namespace Render {
 		glfwMakeContextCurrent(uiWindow);
 
 		if (!gladLoadGLLoader(raw<GLADloadproc>(glfwGetProcAddress))) {
-				glfwDestroyWindow(uiWindow);
-				return std::unexpected("gladLoadGLLoader failed for UI");
+			glfwDestroyWindow(uiWindow);
+			return std::unexpected("gladLoadGLLoader failed for UI");
 		}
 
 		if (!g_imguiInitialized) {
-				IMGUI_CHECKVERSION();
-				ImGui::CreateContext();
-				ImGui::StyleColorsDark();
+			IMGUI_CHECKVERSION();
+			ImGui::CreateContext();
+			ImGui::StyleColorsDark();
+			
+			ImGuiStyle& style = ImGui::GetStyle();
+			style.Colors[ImGuiCol_WindowBg] = ImVec4(0.12f, 0.12f, 0.12f, 1.0f);
+			
+			ImGui_ImplGlfw_InitForOpenGL(uiWindow, true);
+			ImGui_ImplOpenGL3_Init("#version 330 core");
 
-				ImGui_ImplGlfw_InitForOpenGL(uiWindow, true);
-				ImGui_ImplOpenGL3_Init("#version 330 core");
-
-				g_imguiInitialized = true;
+			g_imguiInitialized = true;
 		}
+
 
 		g_uiWindow = uiWindow;
 		return uiWindow;
