@@ -17,16 +17,6 @@ import artnet;
 import render;
 import appState;
 
-constexpr char vertex_src[] = {
-	#embed "../shaders/vertex.glsl"
-};
-constexpr char frag_src[] = {
-	#embed "../shaders/frag.glsl"
-};
-constexpr char frag9_src[] = {
-	#embed "../shaders/frag9.glsl"
-};
-
 GLuint dmxDataTexture;
 
 auto RENDER_HEIGHT = ArtNet::H_RENDER_HEIGHT;
@@ -136,7 +126,6 @@ int main(int argc, char* argv[]) {
 		return -1;
 	}
 	
-	
 	if(!app::debugMode){
 		glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
 	}
@@ -151,11 +140,10 @@ int main(int argc, char* argv[]) {
 	}
 	glfwMakeContextCurrent(window);
 	
-	if (!gladLoadGLLoader(raw<GLADloadproc>(glfwGetProcAddress))) {
-		std::cerr << "Failed to initialize GLAD" << std::endl;
-		return -1;
+	if ( auto r = Render::InitGlad(); !r ) {
+		std::cerr << r.error() << "\n";
 	}
-	
+
 	glViewport(0, 0, RENDER_WIDTH, RENDER_HEIGHT);
 	
 	glGenTextures(1, &dmxDataTexture);
@@ -163,20 +151,11 @@ int main(int argc, char* argv[]) {
 	glTexImage1D(GL_TEXTURE_1D, 0, GL_R32F, dmxLogger.Channels, 0, GL_RED, GL_FLOAT, dmxLogger.dmxDataNormalized.data());
 	glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	
-	std::string_view fragShader = app::nineMode ? frag9_src : frag_src;
-	std::string_view vertexShader = vertex_src;
+	std::string_view fragShader = app::nineMode ? Render::frag9_src : Render::frag_src;
+	std::string_view vertexShader = Render::vertex_src;
 	Shader shader(vertexShader, fragShader);
 	glUseProgram(shader.m_ID);
 	glUniform2f(glGetUniformLocation(shader.m_ID, "resolution"), RENDER_WIDTH, RENDER_HEIGHT);
-	float vertices[] = {
-		-1.0f,  1.0f,  0.0f, 1.0f, // Top-left
-		-1.0f, -1.0f,  0.0f, 0.0f, // Bottom-left
-		1.0f, -1.0f,  1.0f, 0.0f, // Bottom-right
-		
-		-1.0f,  1.0f,  0.0f, 1.0f, // Top-left
-		1.0f, -1.0f,  1.0f, 0.0f, // Bottom-right
-		1.0f,  1.0f,  1.0f, 1.0f  // Top-right
-	};
 	
 	GLuint VAO, VBO;
 	glGenVertexArrays(1, &VAO);
@@ -184,7 +163,7 @@ int main(int argc, char* argv[]) {
 	
 	glBindVertexArray(VAO);
 	glBindBuffer(GL_ARRAY_BUFFER, VBO);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(Render::vertices), Render::vertices, GL_STATIC_DRAW);
 	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
 	glEnableVertexAttribArray(0);
 	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
@@ -210,7 +189,25 @@ int main(int argc, char* argv[]) {
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture, 0);
 	
 	glfwMakeContextCurrent(nullptr);
-	std::thread renderThread(Render::renderLoop, window, std::ref(dmxLogger), std::ref(shader), VAO, dmxDataTexture, std::ref(sender), framebuffer, texture);
+
+	auto uiWinExp = Render::CreateGUI();
+	if (!uiWinExp) {
+		std::cerr << uiWinExp.error() << "\n";
+	} else {
+		GLFWwindow* uiWindow = *uiWinExp;
+	}
+
+	std::thread renderThread(
+		Render::renderLoop, 
+		window, 
+		std::ref(dmxLogger), 
+		std::ref(shader), 
+		VAO, 
+		dmxDataTexture, 
+		std::ref(sender), 
+		framebuffer, 
+		texture
+	);
 	
 	//Main thread loop
 	while (!glfwWindowShouldClose(window)) {

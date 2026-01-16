@@ -8,6 +8,9 @@ module;
 #include <ranges>
 
 #include "../../external/vendor/glad.h"
+#include "../../external/vendor/imGui/imgui.h"
+#include "../../external/vendor/imGui/backends/imgui_impl_glfw.h"
+#include "../../external/vendor/imGui/backends/imgui_impl_opengl3.h"
 #include <glfw3.h>
 #include <SpoutGL/SpoutSender.h>
 
@@ -17,30 +20,33 @@ import shader;
 import appState;
 import artnet;
 
-constexpr char vertex_src[] = {
-	#embed "../shaders/vertex.glsl"
-};
-constexpr char frag_src[] = {
-	#embed "../shaders/frag.glsl"
-};
-constexpr char frag9_src[] = {
-	#embed "../shaders/frag9.glsl"
-};
-
-f32 vertices[] = {
-	-1.0f,  1.0f,  0.0f, 1.0f, // Top-left
-	-1.0f, -1.0f,  0.0f, 0.0f, // Bottom-left
-	1.0f, -1.0f,  1.0f, 0.0f, // Bottom-right
-	
-	-1.0f,  1.0f,  0.0f, 1.0f, // Top-left
-	1.0f, -1.0f,  1.0f, 0.0f, // Bottom-right
-	1.0f,  1.0f,  1.0f, 1.0f  // Top-right
-};
-
-constexpr int RENDER_WIDTH = 1920;
-constexpr int RENDER_HEIGHT = 208;
-
 export namespace Render {
+
+	constexpr char vertex_src[] = {
+		#embed "../shaders/vertex.glsl"
+	};
+	constexpr char frag_src[] = {
+		#embed "../shaders/frag.glsl"
+	};
+	constexpr char frag9_src[] = {
+		#embed "../shaders/frag9.glsl"
+	};
+
+	f32 vertices[] = {
+		-1.0f,  1.0f,  0.0f, 1.0f, // Top-left
+		-1.0f, -1.0f,  0.0f, 0.0f, // Bottom-left
+		1.0f, -1.0f,  1.0f, 0.0f, // Bottom-right
+		
+		-1.0f,  1.0f,  0.0f, 1.0f, // Top-left
+		1.0f, -1.0f,  1.0f, 0.0f, // Bottom-right
+		1.0f,  1.0f,  1.0f, 1.0f  // Top-right
+	};
+
+	constexpr int RENDER_WIDTH = 1920;
+	constexpr int RENDER_HEIGHT = 208;
+  bool g_imguiInitialized = false;
+	GLFWwindow* g_uiWindow = nullptr;
+
 	enum class RenderError {
 		glfwFailed,
 		windowCreationFailed,
@@ -48,6 +54,49 @@ export namespace Render {
 	};
 
 	GLuint dmxDataTexture;
+
+	auto CreateGUI() -> std::expected<GLFWwindow*, std::string> {
+		if (g_uiWindow) {
+				return g_uiWindow;
+		}
+
+		glfwDefaultWindowHints();
+		glfwWindowHint(GLFW_VISIBLE, GLFW_TRUE);
+		glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+		glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+		glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+
+		GLFWwindow* uiWindow = glfwCreateWindow(1280, 720, "DMX Rasterizer UI", nullptr, nullptr);
+		if (!uiWindow) return std::unexpected("glfwCreateWindow(UI) failed");
+
+		glfwMakeContextCurrent(uiWindow);
+
+		if (!gladLoadGLLoader(raw<GLADloadproc>(glfwGetProcAddress))) {
+				glfwDestroyWindow(uiWindow);
+				return std::unexpected("gladLoadGLLoader failed for UI");
+		}
+
+		if (!g_imguiInitialized) {
+				IMGUI_CHECKVERSION();
+				ImGui::CreateContext();
+				ImGui::StyleColorsDark();
+
+				ImGui_ImplGlfw_InitForOpenGL(uiWindow, true);
+				ImGui_ImplOpenGL3_Init("#version 330 core");
+
+				g_imguiInitialized = true;
+		}
+
+		g_uiWindow = uiWindow;
+		return uiWindow;
+	}
+
+	auto InitGlad() -> std::expected<void, std::string> {
+		if (!gladLoadGLLoader(raw<GLADloadproc>(glfwGetProcAddress))) { 
+			return std::unexpected(std::string("Failed to create initialize Glad"));
+		}
+		return {};
+	}
 	
 	auto BeginRenderer(std::span<u8> dmxspan) -> std::expected<void, RenderError> {
 

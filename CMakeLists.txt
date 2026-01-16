@@ -40,10 +40,20 @@ set(MODULE_FILES
 	
 	src/mod/logging.cppm
 )
+
+set(IMGUI_SRC
+	src/external/vendor/imgui/imgui.cpp
+	src/external/vendor/imgui/imgui_draw.cpp
+	src/external/vendor/imgui/imgui_tables.cpp
+	src/external/vendor/imgui/imgui_widgets.cpp
+	src/external/vendor/imgui/backends/imgui_impl_glfw.cpp
+	src/external/vendor/imgui/backends/imgui_impl_opengl3.cpp
+)
+
 add_library(glad STATIC src/external/vendor/glad.c)
 target_include_directories(glad PUBLIC src/external/vendor)
 
-add_executable(${PROJECT_NAME} ${SOURCE_FILES} ${APP_ICO})
+add_executable(${PROJECT_NAME} ${SOURCE_FILES} ${IMGUI_SRC} ${APP_ICO})
 
 target_sources(${PROJECT_NAME} PRIVATE
 	FILE_SET cxx_modules TYPE CXX_MODULES FILES
