@@ -37,6 +37,7 @@ set(MODULE_FILES
 	src/mod/net/winsock.cppm
 	
 	src/mod/render/render.cppm
+	src/mod/render/ui.cppm
 	
 	src/mod/logging.cppm
 )

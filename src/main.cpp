@@ -6,6 +6,7 @@
 #include <unordered_map>
 #include <thread>
 #include <span>
+#include <expected>
 
 #include "./external/vendor/glad.h"
 #include <glfw3.h>
@@ -20,17 +21,10 @@ import artnet;
 import render;
 import appState;
 
-GLuint dmxDataTexture;
-
-auto RENDER_HEIGHT = ArtNet::H_RENDER_HEIGHT;
-auto RENDER_WIDTH = ArtNet::H_RENDER_WIDTH;
-auto RENDER_COLUMNS = ArtNet::H_GRID_COLUMNS;
-auto RENDER_ROWS = ArtNet::H_GRID_ROWS;
-
 int main(int argc, char* argv[]) {
 	ArtNet::UniverseLogger dmxLogger;
 
-	enum ArgType {VERSION, PORT, DEBUG, VERTICAL, OSCSEND, BINDIP, CH9, UNKNOWN };
+	enum ArgType {VERSION, PORT, DEBUG, VERTICAL, BINDIP, CH9, UNKNOWN };
 	std::unordered_map<std::string, ArgType> argMap = {
 		{"-v", VERSION},
 		{"--version", VERSION},
@@ -39,7 +33,6 @@ int main(int argc, char* argv[]) {
 		{"-d", DEBUG},
 		{"--debug", DEBUG},
 		{"-v", VERTICAL},
-		{"-o", OSCSEND},
 		{"--bind", BINDIP},
 		{"-9", CH9},
 		{"--RGB", CH9}
@@ -58,15 +51,22 @@ int main(int argc, char* argv[]) {
 				break;
 				case PORT:
 				if (i + 1 < argc) {
-					try {
-						app::ipPort = std::stoi(argv[++i]);
-						if (app::ipPort < 1 || app::ipPort > 65535) {
-							throw std::out_of_range("Port out of valid range");
-						}
-					} catch (const std::exception& e) {
-						std::cerr << "Error: Missing value for " << arg << " flag." << std::endl;
-						std::cerr << "using default port: " << app::ipPort << std::endl;
+					if (auto port = [](std::string_view s) -> std::expected<int, std::string> {
+						int value{};
+						auto [ptr, ec] = std::from_chars(s.data(), s.data() + s.size(), value);
+
+						if (ec != std::errc{} || ptr != s.data() + s.size()) return std::unexpected("invalid numeric port");
+						if (value < 1 || value > 65535) return std::unexpected("port out of range (1–65535)");
+
+						return value;
+					}(argv[++i])) {
+						app::ipPort = *port;
+					} else {
+						std::cerr << "Error parsing --port: " << port.error() << '\n';
+						std::cerr << "Using default port: " << app::ipPort << '\n';
 					}
+				} else {
+					std::cerr << "Error: Missing value for " << arg << " flag.\n";
 					break;
 				}
 				
@@ -76,10 +76,8 @@ int main(int argc, char* argv[]) {
 				
 				case VERTICAL:
 				app::verticalMode = true;
-				RENDER_HEIGHT = ArtNet::V_RENDER_HEIGHT;
-				RENDER_WIDTH = ArtNet::V_RENDER_WIDTH;
-				RENDER_COLUMNS = ArtNet::V_GRID_COLUMNS;
-				RENDER_ROWS = ArtNet::V_GRID_ROWS;
+				Render::DmxTexture.Height = ArtNet::V_RENDER_HEIGHT;
+				Render::DmxTexture.Width = ArtNet::V_RENDER_WIDTH;
 				break;
 				
 				case BINDIP:
@@ -98,8 +96,8 @@ int main(int argc, char* argv[]) {
 				
 				case CH9:
 				app::nineMode = true;
-				dmxLogger.Universes = 9;
-				dmxLogger.Channels = ArtNet::TOTAL_DMX_CHANNELS * 3;
+				Render::DmxTexture.Universes = 9;
+				Render::DmxTexture.Channels = ArtNet::TOTAL_DMX_CHANNELS * 3;
 				std::cout << "RGB mode on\n";
 				break;
 				
@@ -121,178 +119,46 @@ int main(int argc, char* argv[]) {
 			: "0.0.0.0";
 	}
 	
-	dmxLogger.dmxData.resize(dmxLogger.Channels);
-	dmxLogger.dmxDataNormalized.resize(dmxLogger.Channels);
+	dmxLogger.dmxData.resize(Render::DmxTexture.Channels);
+	Render::DmxTexture.ChannelsNormalized.resize(Render::DmxTexture.Channels);
 
-	if (!glfwInit()) {
-		std::cerr << "Failed to initialize GLFW" << std::endl;
+	auto init = Render::InitGLFW(Render::DmxTexture)
+		.and_then(Render::InitGLAD);
+	if (!init) {
+		std::cerr << init.error() << "\n";
 		return -1;
 	}
-	
-	if(!app::debugMode){
-		glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
-	}
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-	GLFWwindow* window = glfwCreateWindow(RENDER_WIDTH, RENDER_HEIGHT, "DMX Shader Renderer", nullptr, nullptr);
-	if (!window) {
-		std::cerr << "Failed to create GLFW window" << std::endl;
-		glfwTerminate();
-		return -1;
-	}
-	glfwMakeContextCurrent(window);
-	
-	if ( auto r = Render::InitGlad(); !r ) {
-		std::cerr << r.error() << "\n";
-	}
 
-	glViewport(0, 0, RENDER_WIDTH, RENDER_HEIGHT);
-	
-	glGenTextures(1, &dmxDataTexture);
-	glBindTexture(GL_TEXTURE_1D, dmxDataTexture);
-	glTexImage1D(GL_TEXTURE_1D, 0, GL_R32F, dmxLogger.Channels, 0, GL_RED, GL_FLOAT, dmxLogger.dmxDataNormalized.data());
-	glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	
-	std::string_view fragShader = app::nineMode ? Render::frag9_src : Render::frag_src;
-	std::string_view vertexShader = Render::vertex_src;
-	Shader shader(vertexShader, fragShader);
-	glUseProgram(shader.m_ID);
-	glUniform2f(glGetUniformLocation(shader.m_ID, "resolution"), RENDER_WIDTH, RENDER_HEIGHT);
-	
-	GLuint VAO, VBO;
-	glGenVertexArrays(1, &VAO);
-	glGenBuffers(1, &VBO);
-	
-	glBindVertexArray(VAO);
-	glBindBuffer(GL_ARRAY_BUFFER, VBO);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(Render::vertices), Render::vertices, GL_STATIC_DRAW);
-	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
-	glEnableVertexAttribArray(0);
-	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
-	glEnableVertexAttribArray(1);
+	Render::SetupDmxDataTexture();
+	auto shader = Render::SetupShaderLoad();
+	Render::SetupVertexArrBuf();
+	Render::SetupTextureAndBuffer();
 	
 	SOCKET artNetSocket = setupArtNetSocket(app::ipPort, app::bindIp);
-	
 	std::span<byte> dmxSpan(dmxLogger.dmxData);
 	std::thread artNetThread(receiveArtNetData, artNetSocket, dmxSpan, std::ref(dmxLogger));
-	
-	SpoutSender sender;
-	if (!sender.CreateSender("DmxRasterizer", RENDER_WIDTH, RENDER_HEIGHT)) {
-		std::cerr << "Failed to create Spout sender!" << std::endl;
-    return -1;
-	}
-	
-	GLuint texture, framebuffer;
-	glGenTextures(1, &texture);
-	glBindTexture(GL_TEXTURE_2D, texture);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, RENDER_WIDTH, RENDER_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
-	glGenFramebuffers(1, &framebuffer);
-	glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture, 0);
-	
+
 	glfwMakeContextCurrent(nullptr);
-
-	GLFWwindow* uiWindow{nullptr};
-	auto uiWinExp = Render::CreateGUI();
-	if (!uiWinExp) {
-		std::cerr << uiWinExp.error() << "\n";
-	} else {
-		uiWindow = *uiWinExp;
-	}
-
 	std::thread renderThread(
-		Render::renderLoop, 
-		window, 
-		std::ref(dmxLogger), 
-		std::ref(shader), 
-		VAO, 
-		dmxDataTexture, 
-		std::ref(sender), 
-		framebuffer, 
-		texture
+		Render::renderLoop,
+		std::ref(dmxLogger),
+		std::ref(shader),
+		Render::dmxDataTexture,
+		Render::framebuffer, 
+		Render::texture
+	);
+
+	if (!SetupWindow()) {
+		std::cerr << "FAILED\n";
+		return -1;
+	}
+	std::thread guiThread(
+		ImGuiLoop
 	);
 	
 	//Main thread loop
-	while (!glfwWindowShouldClose(window)) {
+	while (!glfwWindowShouldClose(app::GuiWindow)) {
 		glfwPollEvents();
-
-		ImGui_ImplOpenGL3_NewFrame();
-		ImGui_ImplGlfw_NewFrame();
-		ImGui::NewFrame();
-
-    // Build UI
-		// UI Panel 1
-		ImGui::SetNextWindowPos(ImVec2(10, 10), ImGuiCond_Always);
-		ImGui::SetNextWindowSize(ImVec2(400, 100), ImGuiCond_Always);
-		ImGui::Begin("DmxMainLog", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize);
-		ImGui::Text("DMX Rasterizer | v1.0.0");
-		ImGui::Text("FPS: %.1f", ImGui::GetIO().Framerate);
-
-		std::string keys_pressed;
-		for (ImGuiKey key = ImGuiKey_NamedKey_BEGIN; key < ImGuiKey_NamedKey_END; key = (ImGuiKey)(key + 1)) {
-			if (ImGui::IsKeyDown(key)) {
-				if (const char* name = ImGui::GetKeyName(key)) {
-					keys_pressed += name;
-					keys_pressed += " ";
-				}
-			}
-		}
-		ImGui::TextWrapped("Keys: %s", keys_pressed.c_str());
-		ImGui::End();
-
-		// UI Panel 2 -- Settings
-		ImGui::SetNextWindowPos(ImVec2(10, 120), ImGuiCond_Always);
-		ImGui::SetNextWindowSize(ImVec2(400, 145), ImGuiCond_Always);
-		ImGui::Begin("DmxControls", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoSavedSettings);
-		
-		ImGui::Text("FPS Limit");
-		ImGui::SetNextItemWidth(150.0f);
-		ImGui::BeginDisabled(app::VsyncEnabled);
-		if (ImGui::Combo("##FPS Limit", &app::FrameRateSel, app::FPS_LABELS.data(), as<int>(app::FPS_ITEMS.size()))) {
-			std::wcerr << L"\nfps selected";
-		}
-		ImGui::EndDisabled();
-		
-		ImGui::SameLine(); ImGui::Checkbox("Vsync", &app::VsyncEnabled);
-		ImGui::Text("");
-		ImGui::Text("Network");
-		ImGui::SetNextItemWidth(162.0f);
-		ImGui::InputText("##IPv4", app::ipStr.data(), app::ipStr.size());
-		ImGui::SetNextItemWidth(50.0f);
-		ImGui::SameLine();
-		ImGui::InputInt("##Port", &app::ipPort, 0, 0, ImGuiInputTextFlags_None);
-		
-		ImGui::BeginDisabled(true);
-		if (ImGui::Button("Connect")) {
-			// if (net::Operational()) {
-			// 	net::OpenNetworkSocket(0, state::ipPort);
-			// }
-		}
-		ImGui::EndDisabled();
-		
-		ImGui::BeginDisabled(false);
-		ImGui::SameLine();
-		if (ImGui::Button("Disconnect")) {
-			// net::CloseNetworkSocket();
-		}
-		ImGui::EndDisabled();
-		ImGui::End();
-
-		ImGui::Render();
-
-		glfwMakeContextCurrent(uiWindow);
-
-		int fbw = 0, fbh = 0;
-		glfwGetFramebufferSize(uiWindow, &fbw, &fbh);
-		glViewport(0, 0, fbw, fbh);
-
-		glClearColor(0.12f, 0.12f, 0.12f, 1.0f);
-		glClear(GL_COLOR_BUFFER_BIT);
-
-		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-
-		glfwSwapBuffers(uiWindow);
 	}
 	
 	app::running = false;
@@ -301,8 +167,9 @@ int main(int argc, char* argv[]) {
 	closesocket(artNetSocket);
 	artNetThread.join();
 	renderThread.join();
+	guiThread.join();
 	
-	glDeleteBuffers(1, &VBO);
+	glDeleteBuffers(1, &Render::VBO);
 	glfwTerminate();
 	WSACleanup();
 	return 0;

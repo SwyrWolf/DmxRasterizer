@@ -6,11 +6,16 @@ module;
 #include <ranges>
 #include <chrono>
 
+#include <glfw3.h>
+
 export module appState;
 
 export namespace app {
 	std::string Version{"0.8.3"};
 	std::atomic<bool> running{true};
+
+	GLFWwindow* SpoutWindow{nullptr};
+	GLFWwindow* GuiWindow{nullptr};
 
 	bool verticalMode{false};
 	bool oscMode{false};
