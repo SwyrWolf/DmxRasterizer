@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 4.2.0)
-project(DmxRasterizer VERSION 0.8.3)
+project(DmxRasterizer VERSION 1.0.0)
 
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -29,6 +29,8 @@ set(SOURCE_FILES
 )
 set(MODULE_FILES
 	src/external/werelib/weretype.cppm
+	src/external/werelib/fmt.cppm
+
 	src/shader.cppm
 	src/artnet.cppm
 	src/appState.cppm
@@ -39,7 +41,7 @@ set(MODULE_FILES
 	src/mod/render/render.cppm
 	src/mod/render/ui.cppm
 	
-	src/mod/logging.cppm
+	src/mod/applog.cppm
 )
 
 set(IMGUI_SRC

@@ -9,27 +9,28 @@ module;
 #include <glfw3.h>
 
 export module appState;
+import applog;
 
 export namespace app {
-	std::string Version{"0.8.3"};
+	std::string Version{"1.0.0"};
 	std::atomic<bool> running{true};
 
 	GLFWwindow* SpoutWindow{nullptr};
 	GLFWwindow* GuiWindow{nullptr};
 
-	bool verticalMode{false};
-	bool oscMode{false};
-	bool nineMode{false};
 	bool debugMode{false};
-
 	bool RGBmode{false};
 	bool Unicast{false};
 	bool OpenConnection{false};
 	bool VsyncEnabled{true};
 
+	std::wstring Debug = L"";
+
 	std::array<char,16> ipStr = {"127.0.0.1"};
 	int ipPort{6454};
 	std::optional<std::string> bindIp;
+
+	applog::UniverseTimer times{};
 
 	int FrameRateSel = 3;
 	using namespace std::chrono_literals;

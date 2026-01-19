@@ -1,6 +1,7 @@
 module;
 
 #include <iostream>
+#include <ranges>
 
 #include "../../external/vendor/glad.h"
 #include "../../external/vendor/imGui/imgui.h"
@@ -12,6 +13,7 @@ export module render.ui;
 import appState;
 import weretype;
 import artnet;
+import fmtwrap;
 
 int fbw{}, fbh{};
 
@@ -39,6 +41,11 @@ export void ImGuiLoop() noexcept {
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
 	ImGui::StyleColorsDark();
+	ImGuiIO& io = ImGui::GetIO();
+
+	ImFontConfig font_cfg;
+	font_cfg.SizePixels = 15.0f;
+	io.FontDefault = io.Fonts->AddFontDefault(&font_cfg);
 	
 	ImGuiStyle& style = ImGui::GetStyle();
 	style.Colors[ImGuiCol_WindowBg] = ImVec4(0.12f, 0.12f, 0.12f, 1.0f);
@@ -47,6 +54,7 @@ export void ImGuiLoop() noexcept {
 	ImGui_ImplOpenGL3_Init("#version 330 core");
 	
 	while(app::running) {
+		
 		ImGui_ImplOpenGL3_NewFrame();
 		ImGui_ImplGlfw_NewFrame();
 		ImGui::NewFrame();
@@ -109,7 +117,34 @@ export void ImGuiLoop() noexcept {
 		ImGui::EndDisabled();
 		ImGui::End();
 
-		ImGui::Render();
+		// UI Panel 3 -- Right
+		ImGui::SetNextWindowPos(ImVec2(420, 10), ImGuiCond_Always);
+		ImGui::SetNextWindowSize(ImVec2(300, 255), ImGuiCond_Always);
+		ImGui::Begin("DmxLogs", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoSavedSettings);
+
+		std::string uniStatus;
+		uniStatus.reserve(256);
+
+		ImGui::Checkbox(
+			fmt::cat("9 Universe Mode: ", app::RGBmode ? "Enabled" : "Disabled").c_str(),
+			&app::RGBmode
+		);
+
+		for (int i : std::views::iota(0, 9)) {
+			uniStatus += fmt::cat("UNI-0", i, ": ",app::times.GetTimeDeltaMsAt(i), "ms\n");
+		}
+		ImGui::Text("%s",uniStatus.c_str());
+		ImGui::End();
+
+		// UI Panel 4 -- Bottom
+		ImGui::SetNextWindowPos(ImVec2(10, 275), ImGuiCond_Always);
+		ImGui::SetNextWindowSize(ImVec2(710, 230), ImGuiCond_Always);
+		ImGui::Begin("Reporting", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoSavedSettings);
+
+		ImGui::Text("%ls",app::Debug.c_str());
+		ImGui::End();
+
+		ImGui::Render(); // Render UI
 
 		glfwGetFramebufferSize(app::GuiWindow, &fbw, &fbh);
 		glViewport(0, 0, fbw, fbh);

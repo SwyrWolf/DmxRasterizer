@@ -24,15 +24,14 @@ import appState;
 int main(int argc, char* argv[]) {
 	ArtNet::UniverseLogger dmxLogger;
 
-	enum ArgType {VERSION, PORT, DEBUG, VERTICAL, BINDIP, CH9, UNKNOWN };
+	enum ArgType {VERSION, PORT, DEBUG, BINDIP, CH9, UNKNOWN };
 	std::unordered_map<std::string, ArgType> argMap = {
 		{"-v", VERSION},
 		{"--version", VERSION},
-		{"-p", PORT},
-		{"--port", PORT},
 		{"-d", DEBUG},
 		{"--debug", DEBUG},
-		{"-v", VERTICAL},
+		{"-p", PORT},
+		{"--port", PORT},
 		{"--bind", BINDIP},
 		{"-9", CH9},
 		{"--RGB", CH9}
@@ -74,12 +73,6 @@ int main(int argc, char* argv[]) {
 				app::debugMode = true;
 				break;
 				
-				case VERTICAL:
-				app::verticalMode = true;
-				Render::DmxTexture.Height = ArtNet::V_RENDER_HEIGHT;
-				Render::DmxTexture.Width = ArtNet::V_RENDER_WIDTH;
-				break;
-				
 				case BINDIP:
 				if (i + 1 < argc) {
 					std::string ip = argv[++i];
@@ -95,7 +88,7 @@ int main(int argc, char* argv[]) {
 				break;
 				
 				case CH9:
-				app::nineMode = true;
+				app::RGBmode = true;
 				Render::DmxTexture.Universes = 9;
 				Render::DmxTexture.Channels = ArtNet::TOTAL_DMX_CHANNELS * 3;
 				std::cout << "RGB mode on\n";

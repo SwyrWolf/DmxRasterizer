@@ -95,7 +95,7 @@ export namespace Render {
 
 	[[nodiscard]] Shader
 	SetupShaderLoad() {
-		std::string_view fragShader = app::nineMode ? Render::frag9_src : Render::frag_src;
+		std::string_view fragShader = app::RGBmode ? Render::frag9_src : Render::frag_src;
 		std::string_view vertexShader = Render::vertex_src;
 		Shader shader(vertexShader, fragShader);
 		glUseProgram(shader.m_ID);

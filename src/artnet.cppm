@@ -33,10 +33,7 @@ export namespace ArtNet {
 
 	class UniverseLogger {
 	public:
-		int Universes{3};
-		int Channels{1560};
 		std::vector<u8> dmxData;
-		std::vector<f32> dmxDataNormalized;
 
 		void MeasureTimeDelta(byte universeID) {
 			auto now = std::chrono::steady_clock::now();
@@ -152,23 +149,11 @@ export void receiveArtNetData(SOCKET sock, std::span<u8> dmxData, ArtNet::Univer
 			std::cerr << "Failed to receive UDP packet. Error: " << error << std::endl;
 			return;
 		}
-
-		// std::span<u8> buf{raw<u8*>(buffer.data()), buffer.size()};
-		// auto res = logger.dmxIO.ProcessPacket(buf);
-		// if (!res) { 
-		// 	std::cerr << "net.Artnet failed! \n"; 
-		// } else {
-		// 	auto r = logger.gridNode.set(res.value(), logger.dmxIO.Read());
-		// 	if (!r) { 
-		// 		std::cerr << "net.Artnet failed at step 2\n"; 
-		// 	}
-		// }
-
 		
 		if (bytesReceived > 18 && std::strncmp(buffer.data(), "Art-Net", 7) == 0) {
 			u16 universeID = buffer[14] | (buffer[15] << 8);
 			
-			if (universeID < logger.Universes) {
+			if (universeID < 9) {
 				int dmxDataLength = std::min<int>(bytesReceived - 18, as<int>(ArtNet::DMX_UNIVERSE_SIZE));
 				std::span<const u8> dmxStart{raw<const u8*>(buffer.data() + 18), 512};
 
@@ -176,23 +161,13 @@ export void receiveArtNetData(SOCKET sock, std::span<u8> dmxData, ArtNet::Univer
 				std::memcpy(dmxArray.data(), dmxStart.data(), dmxArray.size());
 				
 				int universeOffset = (universeID * ArtNet::VRSL_UNIVERSE_GRID);
-				if (universeOffset + dmxDataLength <= logger.Channels) {
+				if (universeOffset + dmxDataLength <= 1560 ) {
 					std::memcpy(&dmxData[universeOffset], dmxStart.data(), dmxDataLength);
 				}
 
-				logger.MeasureTimeDelta(universeID);
+				app::times.MeasureTimeDelta(universeID);
 				logger.signalRender();
 			}
-
-			std::cout << "Received Data:\n";
-			auto deltas = logger.GetTimeDeltasMs();
-
-			for (auto [index, value] : deltas | std::views::enumerate) {
-				std::cout << "\r\033[K";
-				std::cout << "-> Universe " << index << ": " << value << "ms\n";
-			} 
-
-			std::cout << "\033[" << (deltas.size() + 1) << "A" << std::flush;
 		}
 	}
 }
