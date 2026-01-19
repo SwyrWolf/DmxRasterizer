@@ -5,6 +5,7 @@ module;
 #include <optional>
 #include <span>
 #include <memory>
+
 #include <winsock2.h>
 #include <ws2tcpip.h>
 
@@ -13,6 +14,12 @@ import appState;
 import weretype;
 
 export namespace winsock {
+
+	constexpr u32 localhost = INADDR_LOOPBACK;
+	constexpr u16 artnetport = 6454;
+
+	bool g_WinsockStatus{false};
+	WSADATA g_WsaData{};
 
 	// Socket types
 	enum class SOCK : int {
@@ -23,148 +30,93 @@ export namespace winsock {
 		SEQ = SOCK_SEQPACKET,	// 5 : sequenced packet stream
 	};
 
-	// Error Types
-	enum class NetError : int {
-		WsaStartupFailure,
-		SocketAlreadyOpen,
-		CreationFailed,
-		OptionsFailed,
-		BindFailed,
-		InvalidIP,
-		PortUnavailable,
-		PermissionDenied,
-		RecvFailure,
+	struct AddressV4 {
+		u32 ip{localhost};
+		u16 port{artnetport};
 	};
 
 	// ipv4 string to u32
-	auto ipv4_strToU32(const std::string& str) -> std::expected<u32, NetError> {
+	[[nodiscard]] std::expected<u32, std::string>
+	ipv4_strToU32(const std::string& str) {
 		u32 addr_net{};
 		if (InetPtonA(AF_INET, str.c_str(), &addr_net) != 1) {
-			return std::unexpected(NetError::InvalidIP);
+			return std::unexpected("Invalid IP address");
 		}
 		return ntohl(addr_net);
 	}
 
-
-	class NetworkState {
-	private:
-		NetworkState() = default; // private constructor
-
-		inline static WSADATA m_wsaData;
-		
-		SOCKET m_openSock{INVALID_SOCKET};
-		bool m_openConnection{false};
-		
-		sockaddr_in m_listenAddr{};
-		sockaddr_in m_senderAddr{};
-		int m_senderAddrSize = sizeof(m_senderAddr);
-
-	public:
-		//Public Destructor / No Copy, Move
-		#pragma region [Penta]
-		~NetworkState() { cleanup(); }
-		
-		NetworkState(const NetworkState&) = delete;
-		NetworkState& operator=(const NetworkState&) = delete;
-		NetworkState(NetworkState&& other) = delete;
-		NetworkState& operator=(const NetworkState&&) = delete;
-		#pragma endregion
-
-		// Factory Initialize Winsock 2.2
-		[[nodiscard("Expected unique_ptr or Error")]]
-		static auto Create() -> std::expected<std::unique_ptr<NetworkState>, NetError> {
-			std::unique_ptr<NetworkState> state{ new NetworkState() };
-			if (WSAStartup(0x0202, &m_wsaData) != 0) return std::unexpected(NetError::WsaStartupFailure);
-			return state;
-		}
-		
-		// Establish a socket connection
-		[[nodiscard]]
-		auto OpenNetworkSocket(std::optional<u32> ipaddr, u16 port) -> std::expected<void, NetError> {
-
-			if (m_openSock != INVALID_SOCKET) return std::unexpected(NetError::SocketAlreadyOpen);
-
-			m_openSock = WSASocketW(AF_INET, SOCK_DGRAM, 0, nullptr, 0, WSA_FLAG_OVERLAPPED);
-			if (m_openSock == INVALID_SOCKET) {
-				cleanup();
-				return std::unexpected(NetError::CreationFailed);
+	[[nodiscard]] std::expected<void, std::string>
+	Operational() {
+		if (!g_WinsockStatus) {
+			if (WSAStartup(0x0202, &g_WsaData) != 0) {
+				return std::unexpected("WSA startup failed");
 			}
+			g_WinsockStatus = true;
+		}
+		return {};
+	}
 
+	class Net {
+		std::optional<AddressV4> m_Connection;
+		SOCKET openSock = INVALID_SOCKET;
+		sockaddr_in ListenAddr{};
+		sockaddr_in SenderAddr{};
+
+		public:
+		[[nodiscard]] std::expected<void, std::string>
+		OpenNetworkSocket(const AddressV4& ipv4) {
+			if (auto r = Operational(); !r) return std::unexpected(r.error());
+			SOCKET sock = socket(AF_INET, SOCK_DGRAM, 0);
+			if (sock == INVALID_SOCKET) {
+				return std::unexpected("Failure to open socket");
+			}
+			
 			int enable = 1;
-			if (setsockopt(m_openSock, SOL_SOCKET, SO_REUSEADDR, (const char*)&enable, sizeof(enable)) < 0) {
-				cleanup();
-				return std::unexpected(NetError::OptionsFailed);
+			if (setsockopt(openSock, SOL_SOCKET, SO_REUSEADDR, (const char*)&enable, sizeof(enable)) < 0) {
+				return std::unexpected("Failure to set socket options");
 			}
-
-			m_listenAddr.sin_family = AF_INET;
-			m_listenAddr.sin_port = htons(port); // convert u16 (host)little enedian port input of to (network)big endian 
-
-			if (ipaddr.has_value()) {
-				m_listenAddr.sin_addr.s_addr = htonl(ipaddr.value());
-			} else {
-				m_listenAddr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+			ListenAddr.sin_family = AF_INET;
+			ListenAddr.sin_port = htons(ipv4.port);
+			if (inet_pton(AF_INET, app::ipStr.data(), &ListenAddr.sin_addr) != 1) {
+				return std::unexpected("Invalid ipv4 Address");
 			}
-
-			if (bind(m_openSock, raw<sockaddr*>(&m_listenAddr), sizeof(m_listenAddr)) == SOCKET_ERROR) {
+			
+			if (bind(openSock, raw<sockaddr*>(&ListenAddr), sizeof(ListenAddr)) == SOCKET_ERROR) {
 				int error = WSAGetLastError();
-				std::wcerr << L"Failed to bind socket. WSA error code: " << error << L"\n";
-
 				if (error == WSAEADDRINUSE) {
-					std::cerr << "Port " << port << " is already in use by another application.\n";
+					return std::unexpected("Port already in use.");
 				} else if (error == WSAEACCES) {
-					cleanup();
-					return std::unexpected(NetError::PermissionDenied);
+					return std::unexpected("Permission denied.");
 				}
+				return std::unexpected("Failed to bind socket.");
 			}
-			m_openConnection = true;
-			std::cerr << "Listening for Art-Net packets on port " << port << "...\n";
+			
+			m_Connection.emplace(ipv4);
 			return{};
 		}
+		
+		[[nodiscard]] std::expected<void, std::string>
+		CloseNetworkSocket() noexcept {
+			if (openSock == INVALID_SOCKET) return std::unexpected("No open socket.");
+			if (closesocket(openSock) == SOCKET_ERROR) return std::unexpected("Failed to close socket.");
 
-		// End socket connection
-		void CloseNetworkSocket() noexcept {
-			if (m_openSock != INVALID_SOCKET) {
-				if (closesocket(m_openSock) == SOCKET_ERROR) {
-					const int error = WSAGetLastError();
-					std::cerr << "Failed to close socket. WSA error Code: " << error << "\n";
-				} else {
-					std::cerr << "Socket Closed Successfully.\n";
-				}
-				m_openConnection = false;
-				m_listenAddr = {};
-				m_senderAddr = {};
-				m_openSock = INVALID_SOCKET;
-			} else {
-				std::cerr << "No open socket to close.\n";
-			}
-
-			if (WSACleanup() != 0) {
-				const int error = WSAGetLastError();
-				std::cerr << "WSACleanup failed. WSA error code: " << error << "\n";
-			}
+			m_Connection.reset();
+			ListenAddr = {};
+			SenderAddr = {};
+			openSock = INVALID_SOCKET;
+			return {};
 		}
 
-		// Loopable, listen and wait for UDP packet
-		auto RecieveNetPacket() noexcept -> std::expected<std::span<u8>, NetError> {
-			std::array<u8, 1024> buffer{};
+		// [[nodiscard]] std::expected<void, std::string>
+		// RecieveNetPacket() noexcept {
+		// 	std::array<u8, 1024> buffer{};
 
-			int errCode = recvfrom(m_openSock, raw<char*>(buffer.data()), buffer.size(), 0, raw<sockaddr*>(&m_senderAddr), &m_senderAddrSize);
-			if (errCode == SOCKET_ERROR) {
-				int error = WSAGetLastError();
-				std::cerr << "Failed to recieve UDP Packet. Error: " << error << "\n";
-				return std::unexpected(NetError::RecvFailure);
-			}
-			return{};
-		}
+		// 	int errCode = recvfrom(openSock, raw<char*>(buffer.data()), buffer.size(), 0, raw<sockaddr*>(&SenderAddr), &SenderAddrSize);
+		// 	if (errCode == SOCKET_ERROR) {
+		// 		return std::unexpected("Failed to recieve packet.");
+		// 	}
 
-	private:
-		void cleanup() noexcept {
-			if (m_openSock != INVALID_SOCKET) {
-				closesocket(m_openSock);
-				m_openSock = INVALID_SOCKET;
-			}
-			WSACleanup();
-			m_openConnection = false;
-		}
+		// 	return {};
+		// }
 	};
 }
