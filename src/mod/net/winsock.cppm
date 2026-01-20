@@ -104,19 +104,21 @@ export namespace winsock {
 			ListenAddr = {};
 			SenderAddr = {};
 			openSock = INVALID_SOCKET;
+			constexpr int SenderAddrSize = sizeof(SenderAddr);
 			return {};
 		}
 
-		// [[nodiscard]] std::expected<void, std::string>
-		// RecieveNetPacket() noexcept {
-		// 	std::array<u8, 1024> buffer{};
+		[[nodiscard]] std::expected<void, std::string>
+		RecieveNetPacket() noexcept {
+			std::array<u8, 1024> buffer{};
+			
+			int SenderAddrSize = sizeof(SenderAddr);
+			int errCode = recvfrom(openSock, raw<char*>(buffer.data()), buffer.size(), 0, raw<sockaddr*>(&SenderAddr), &SenderAddrSize);
+			if (errCode == SOCKET_ERROR) {
+				return std::unexpected("Failed to recieve packet.");
+			}
 
-		// 	int errCode = recvfrom(openSock, raw<char*>(buffer.data()), buffer.size(), 0, raw<sockaddr*>(&SenderAddr), &SenderAddrSize);
-		// 	if (errCode == SOCKET_ERROR) {
-		// 		return std::unexpected("Failed to recieve packet.");
-		// 	}
-
-		// 	return {};
-		// }
+			return {};
+		}
 	};
 }

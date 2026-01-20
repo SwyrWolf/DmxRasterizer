@@ -31,7 +31,7 @@ export namespace artnet {
 		Nzs                 = 0x5100, // ArtNzs data m_packet. It contains non-zero start code (except RDM) DMX512 information for a single Universe.
 		Sync                = 0x5200, // ArtSync data m_packet. It is used to force synchronous transfer of ArtDmx m_packets to a node’s temp_BinaryPacketput.
 		Address             = 0x6000, // ArtAddress m_packet. It contains remote programming information for a Node.
-		Input               = 0x7000, // ArtInput m_packet. It contains enable – disable data for DMX inputs.
+		Input               = 0x7000, // ArtInput m2_packet. It contains enable – disable data for DMX inputs.
 		TodRequest          = 0x8000, // ArtTodRequest m_packet. It is used to request a Table of Devices (ToD) for RDM discovery.
 		TodData             = 0x8100, // ArtTodData m_packet. It is used to send a Table of Devices (ToD) for RDM discovery.
 		TodControl          = 0x8200, // ArtTodControl m_packet. It is used to send RDM discovery control messages.
@@ -102,96 +102,35 @@ export namespace artnet {
 		InvalidDmxLength
 	};
 
-	class DmxIO {
-		public:
-		[[nodiscard]] auto ValidHeader() const -> bool { return m_packet.signature == ARTNET_SIGNATURE; }
-		[[nodiscard]] auto Universe() const -> u16 { return m_packet.universeID; }
-		
-		[[nodiscard]] auto Read() const -> std::span<const u8> {
-			return std::span<const u8>(m_packet.dmxData.data(), m_packet.dmxLength);
-		}
+	[[nodiscard]] std::expected<void, std::string>
+	ProcessDmxPacket(std::span<const u8> buffer, std::span<u8> storage) noexcept {
 
-		auto ProcessPacket(std::span<const u8> buffer) noexcept 
-		-> std::expected<u16, Err> {
-
-			if (buffer.size() < MIN_PACKET_SIZE || buffer.size() > MAX_PACKET_SIZE) {
-				return std::unexpected(Err::InvalidPacketSize);
-			}
-
-			DMX_BinaryPacket temp_BinaryPacket{};
-			
-			if (std::memcmp(buffer.data(), &ARTNET_SIGNATURE, 8) != 0) {
-				return std::unexpected(Err::InvalidSignature);
-			} else {
-				std::memcpy(&temp_BinaryPacket, buffer.data(), std::min(buffer.size(), sizeof(DMX_BinaryPacket)));
-			}
-
-			if (temp_BinaryPacket.operation != Op::Dmx) {
-				return std::unexpected(Err::InvalidOpCode);
-			}
-
-			if (temp_BinaryPacket.dmxLength > 512 || (temp_BinaryPacket.dmxLength % 2) != 0) {
-				return std::unexpected(Err::InvalidDmxLength);
-			}
-
-			m_packet = temp_BinaryPacket;
-			return { temp_BinaryPacket.universeID };
+		if (buffer.size() < MIN_PACKET_SIZE || buffer.size() > MAX_PACKET_SIZE) {
+			return std::unexpected("Invalid Size");
 		}
 		
-		private:
-		DMX_BinaryPacket m_packet{};
-	};
-
-
-	class GridNode {
-		public:
-		static constexpr std::size_t UniverseBytes = 520;
-		static constexpr std::size_t Universes = 3;
-		using Storage = std::array<u8, UniverseBytes * Universes>;
-		using GridView = std::mdspan<u8, std::extents<std::size_t, UniverseBytes, Universes>>;
-
-		GridNode() noexcept = default;
-		~GridNode() noexcept = default;
-
-		GridNode(const GridNode&) = delete;
-		GridNode& operator=(const GridNode&) = delete;
-		GridNode(GridNode&& other) = delete;
-		GridNode& operator=(const GridNode&&) = delete;
-
-		[[nodiscard]]
-		auto grid() noexcept -> GridView {
-			return GridView{ m_data.data() };
+		DMX_BinaryPacket pkt{};
+		
+		if (std::memcmp(buffer.data(), &ARTNET_SIGNATURE, 8) != 0) {
+			return std::unexpected("Invalid Signature");
 		}
 
-		[[nodiscard]]
-		auto bytes() noexcept -> std::span<u8> {
-			return { m_data.data(), m_data.size() };
+		std::memcpy(&pkt, buffer.data(), std::min(buffer.size(), sizeof(DMX_BinaryPacket)));
+
+		if (pkt.operation != Op::Dmx) {
+			return std::unexpected("Invalid Op Code");
 		}
 
-		[[nodiscard]]
-		auto set(u16 universe, std::span<const u8> data) noexcept -> bool {
-			if (universe >= Universes) {
-				std::cerr << "Universe too large\n";
-				return false;
-			}
-			if (data.size() >= UniverseBytes) {
-				std::cerr << "data too large!\nSize: " << data.size() << "\nSizeBytes: " << UniverseBytes << "\n\n";
-				return false;
-			}
-
-			u8* dst = m_data.data() + (as<std::size_t>(universe) * UniverseBytes);
-			std::memcpy(dst, data.data(), UniverseBytes);
-			return true;
+		if (pkt.dmxLength > 512 || (pkt.dmxLength % 2) != 0) {
+			return std::unexpected("Invalid DMX length");
 		}
 
-		void Normalize() {
-			for (auto&& [src, dst] : std::views::zip(m_data, m_dataNormalized)) {
-				dst = as<f32>(src) / 255.0f;
-			}
+		if (pkt.universeID < 3) {
+			return std::unexpected("Bad Universe");
 		}
 
-		private:
-		Storage m_data{0};
-		Storage m_dataNormalized{0};
-	};
+		const std::size_t offset   = pkt.universeID * 520;
+		std::memcpy(storage.data() + offset, pkt.dmxData.data(), 512);
+		return {};
+	}
 }

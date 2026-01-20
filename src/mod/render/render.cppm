@@ -45,7 +45,8 @@ export namespace Render {
 		int Height{208};
 		int Channels{1560};
 		int Universes{3};
-		std::vector<f32> ChannelsNormalized{1560, 0.0f};
+		std::vector<u8> DmxData = std::vector<u8>(1560);
+		std::vector<f32> ChannelsNormalized{1560};
 	};
 	DmxShaderData DmxTexture{};
 
