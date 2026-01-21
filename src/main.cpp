@@ -16,10 +16,12 @@
 #include "../../external/vendor/imGui/backends/imgui_impl_opengl3.h"
 
 import weretype;
+import appState;
 import shader;
 import artnet;
 import render;
-import appState;
+import net.artnet;
+import net.winsock;
 
 int main(int argc, char* argv[]) {
 	ArtNet::UniverseLogger dmxLogger;
@@ -127,6 +129,23 @@ int main(int argc, char* argv[]) {
 	Render::SetupVertexArrBuf();
 	Render::SetupTextureAndBuffer();
 	
+	winsock::Net net{};
+	winsock::AddressV4 addr{0, 5555};
+	std::string ipstr{app::ipStr.data(), app::ipStr.size()};
+
+	auto ipResult = winsock::ipv4_fromString(ipstr);
+	if (!ipResult) {
+		std::cerr << init.error() << "\n";
+		return -1;
+	}
+	addr.ip = ipResult.value();
+	
+	auto socketResult = net.OpenNetworkSocket(addr);
+	if (!socketResult) {
+		std::cerr << socketResult.error() << "\n";
+		return -1;
+	}
+	
 	SOCKET artNetSocket = setupArtNetSocket(app::ipPort, app::bindIp);
 	std::span<byte> dmxSpan(dmxLogger.dmxData);
 	std::thread artNetThread(receiveArtNetData, artNetSocket, dmxSpan, std::ref(dmxLogger));
@@ -141,6 +160,7 @@ int main(int argc, char* argv[]) {
 		Render::texture
 	);
 
+	// Creation of the Gui Window required on main thread to prevent nullptr race condition
 	if (!SetupWindow()) {
 		std::cerr << "FAILED\n";
 		return -1;

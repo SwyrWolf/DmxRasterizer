@@ -17,6 +17,48 @@ import fmtwrap;
 
 int fbw{}, fbh{};
 
+struct PanelBox {
+	f32 x{}, y{}, w{}, h{};
+};
+struct vec2 {
+	f32 x{}, y{};
+};
+
+namespace grid { // layout
+	constexpr f32 pd{10}; // padding
+	constexpr f32 pd2 = pd * 2; // padding
+	constexpr std::array col{ f32{400}, f32{300} };
+	constexpr std::array row{ f32{100}, f32{200}, f32{225} };
+}
+
+
+constexpr std::array Panels{
+	PanelBox{
+		grid::pd, 
+		grid::pd, 
+		grid::col[0],
+		grid::row[0]
+	}, // Panel 0 -- Top left
+	PanelBox{
+		grid::pd,
+		grid::pd2 + grid::row[0],
+		grid::col[0],
+		grid::row[1]
+	}, // Panel 1 -- Mid left
+	PanelBox{
+		grid::col[0] + grid::pd2,
+		grid::pd,
+		grid::col[1],
+		grid::row[0] + grid::pd + grid::row[1]
+	}, // Panel 2 -- span right
+	PanelBox{
+		grid::pd,
+		grid::row[0] + (grid::pd * 3) + grid::row[1],
+		grid::col[0] + grid::pd + grid::col[1],
+		grid::row[2]
+	} // Panel 3 -- span bottom
+};
+
 export bool SetupWindow() {
 	glfwDefaultWindowHints();
 	glfwWindowHint(GLFW_VISIBLE, GLFW_TRUE);
@@ -44,8 +86,15 @@ export void ImGuiLoop() noexcept {
 	ImGuiIO& io = ImGui::GetIO();
 
 	ImFontConfig font_cfg;
-	font_cfg.SizePixels = 15.0f;
-	io.FontDefault = io.Fonts->AddFontDefault(&font_cfg);
+	font_cfg.SizePixels = 20.0f;
+	font_cfg.OversampleH = 3;
+	font_cfg.OversampleV = 3;
+	font_cfg.PixelSnapH = false;
+	io.FontDefault = io.Fonts->AddFontFromFileTTF(
+		"C:/Windows/Fonts/segoeui.ttf",
+		font_cfg.SizePixels,
+		&font_cfg
+	);
 	
 	ImGuiStyle& style = ImGui::GetStyle();
 	style.Colors[ImGuiCol_WindowBg] = ImVec4(0.12f, 0.12f, 0.12f, 1.0f);
@@ -61,8 +110,8 @@ export void ImGuiLoop() noexcept {
 
 		// Build UI
 		// UI Panel 1
-		ImGui::SetNextWindowPos(ImVec2(10, 10), ImGuiCond_Always);
-		ImGui::SetNextWindowSize(ImVec2(400, 100), ImGuiCond_Always);
+		ImGui::SetNextWindowPos(ImVec2(Panels[0].x, Panels[0].y), ImGuiCond_Always);
+		ImGui::SetNextWindowSize(ImVec2(Panels[0].w, Panels[0].h), ImGuiCond_Always);
 		ImGui::Begin("DmxMainLog", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize);
 		ImGui::Text("DMX Rasterizer | v1.0.0");
 		ImGui::Text("FPS: %.1f", ImGui::GetIO().Framerate);
@@ -80,8 +129,8 @@ export void ImGuiLoop() noexcept {
 		ImGui::End();
 
 		// UI Panel 2 -- Settings
-		ImGui::SetNextWindowPos(ImVec2(10, 120), ImGuiCond_Always);
-		ImGui::SetNextWindowSize(ImVec2(400, 145), ImGuiCond_Always);
+		ImGui::SetNextWindowPos(ImVec2(Panels[1].x, Panels[1].y), ImGuiCond_Always);
+		ImGui::SetNextWindowSize(ImVec2(Panels[1].w, Panels[1].h), ImGuiCond_Always);
 		ImGui::Begin("DmxControls", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoSavedSettings);
 		
 		ImGui::Text("FPS Limit");
@@ -95,7 +144,7 @@ export void ImGuiLoop() noexcept {
 		ImGui::SameLine(); ImGui::Checkbox("Vsync", &app::VsyncEnabled);
 		ImGui::Text("");
 		ImGui::Text("Network");
-		ImGui::SetNextItemWidth(162.0f);
+		ImGui::SetNextItemWidth(155.0f);
 		ImGui::InputText("##IPv4", app::ipStr.data(), app::ipStr.size());
 		ImGui::SetNextItemWidth(50.0f);
 		ImGui::SameLine();
@@ -118,8 +167,8 @@ export void ImGuiLoop() noexcept {
 		ImGui::End();
 
 		// UI Panel 3 -- Right
-		ImGui::SetNextWindowPos(ImVec2(420, 10), ImGuiCond_Always);
-		ImGui::SetNextWindowSize(ImVec2(300, 255), ImGuiCond_Always);
+		ImGui::SetNextWindowPos(ImVec2(Panels[2].x, Panels[2].y), ImGuiCond_Always);
+		ImGui::SetNextWindowSize(ImVec2(Panels[2].w, Panels[2].h), ImGuiCond_Always);
 		ImGui::Begin("DmxLogs", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoSavedSettings);
 
 		std::string uniStatus;
@@ -137,8 +186,8 @@ export void ImGuiLoop() noexcept {
 		ImGui::End();
 
 		// UI Panel 4 -- Bottom
-		ImGui::SetNextWindowPos(ImVec2(10, 275), ImGuiCond_Always);
-		ImGui::SetNextWindowSize(ImVec2(710, 230), ImGuiCond_Always);
+		ImGui::SetNextWindowPos(ImVec2(Panels[3].x, Panels[3].y), ImGuiCond_Always);
+		ImGui::SetNextWindowSize(ImVec2(Panels[3].w, Panels[3].h), ImGuiCond_Always);
 		ImGui::Begin("Reporting", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoSavedSettings);
 
 		ImGui::Text("%ls",app::Debug.c_str());

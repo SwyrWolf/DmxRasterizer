@@ -14,13 +14,20 @@ FetchContent_Declare(
 	glfw
 	GIT_REPOSITORY https://github.com/glfw/glfw.git
 	GIT_TAG 3.4
+	GIT_SHALLOW TRUE
+	GIT_PROGRESS TRUE
 )
 FetchContent_MakeAvailable(glfw)
 
 FetchContent_Declare(
 	spout2
-	GIT_REPOSITORY https://github.com/leadedge/Spout2.git
-	GIT_TAG 2.007.015
+	URL https://github.com/leadedge/Spout2/archive/refs/tags/2.007.015.zip
+	# Direct link because FetchContent will download the entire repo history (GIT_SHALLOW is limited)
+	# DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+	# GIT_REPOSITORY https://github.com/leadedge/Spout2.git
+	# GIT_TAG fc63ac2c16918ffa1d3384cddfba2bbc70650bb4 # 2.007.015
+	# GIT_SHALLOW TRUE
+	# GIT_PROGRESS TRUE
 )
 FetchContent_MakeAvailable(spout2)
 

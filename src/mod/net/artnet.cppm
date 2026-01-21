@@ -102,8 +102,12 @@ export namespace artnet {
 		InvalidDmxLength
 	};
 
+	// Raw Art-Net packets to DMX data storage.
 	[[nodiscard]] std::expected<void, std::string>
-	ProcessDmxPacket(std::span<const u8> buffer, std::span<u8> storage) noexcept {
+	ProcessDmxPacket(
+		std::span<const u8> buffer, // Art-Net UDP packet (Read-Only)
+		std::span<u8>       storage // DMX Storage Location (Mutable)
+	) noexcept {
 
 		if (buffer.size() < MIN_PACKET_SIZE || buffer.size() > MAX_PACKET_SIZE) {
 			return std::unexpected("Invalid Size");

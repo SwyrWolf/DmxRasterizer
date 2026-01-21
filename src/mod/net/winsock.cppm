@@ -1,17 +1,16 @@
 module;
 
-#include <iostream>
 #include <expected>
 #include <optional>
-#include <span>
-#include <memory>
+#include <string>
 
 #include <winsock2.h>
 #include <ws2tcpip.h>
 
 export module net.winsock;
-import appState;
 import weretype;
+import fmtwrap;
+import appState;
 
 export namespace winsock {
 
@@ -35,11 +34,11 @@ export namespace winsock {
 		u16 port{artnetport};
 	};
 
-	// ipv4 string to u32
+	// Verify and convert string -> ipv4 address.
 	[[nodiscard]] std::expected<u32, std::string>
-	ipv4_strToU32(const std::string& str) {
+	ipv4_fromString(const std::string& strInput) noexcept {
 		u32 addr_net{};
-		if (InetPtonA(AF_INET, str.c_str(), &addr_net) != 1) {
+		if (InetPtonA(AF_INET, strInput.c_str(), &addr_net) != 1) {
 			return std::unexpected("Invalid IP address");
 		}
 		return ntohl(addr_net);
@@ -58,7 +57,7 @@ export namespace winsock {
 
 	class Net {
 		std::optional<AddressV4> m_Connection;
-		SOCKET openSock = INVALID_SOCKET;
+		SOCKET openSock{INVALID_SOCKET};
 		sockaddr_in ListenAddr{};
 		sockaddr_in SenderAddr{};
 
@@ -66,14 +65,17 @@ export namespace winsock {
 		[[nodiscard]] std::expected<void, std::string>
 		OpenNetworkSocket(const AddressV4& ipv4) {
 			if (auto r = Operational(); !r) return std::unexpected(r.error());
-			SOCKET sock = socket(AF_INET, SOCK_DGRAM, 0);
-			if (sock == INVALID_SOCKET) {
+
+			openSock = socket(AF_INET, SOCK_DGRAM, 0);
+			if (openSock == INVALID_SOCKET) {
 				return std::unexpected("Failure to open socket");
 			}
+
 			
 			int enable = 1;
 			if (setsockopt(openSock, SOL_SOCKET, SO_REUSEADDR, (const char*)&enable, sizeof(enable)) < 0) {
-				return std::unexpected("Failure to set socket options");
+				const int wsa = WSAGetLastError();
+				return std::unexpected(fmt::cat("Failure to set socket options! Return: ", wsa));
 			}
 			ListenAddr.sin_family = AF_INET;
 			ListenAddr.sin_port = htons(ipv4.port);
