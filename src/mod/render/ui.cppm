@@ -12,7 +12,7 @@ module;
 export module render.ui;
 import appState;
 import weretype;
-import artnet;
+import net.artnet;
 import fmtwrap;
 
 int fbw{}, fbh{};

@@ -12,7 +12,6 @@ module;
 #include <SpoutGL/SpoutSender.h>
 
 export module render;
-export import render.ui;
 import weretype;
 import shader;
 import appState;
