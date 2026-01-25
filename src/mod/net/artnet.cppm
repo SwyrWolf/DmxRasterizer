@@ -8,6 +8,7 @@ module;
 #include <expected>
 #include <span>
 #include <algorithm>
+#include <iostream>
 
 export module net.artnet;
 import weretype;
@@ -60,7 +61,7 @@ export namespace artnet {
 
 	// --- Other ArtNet related messages ---
 	enum class NodeFlag : u8 {
-		None                    = 0x00, // no bits set
+		None                    = 0x00,    // no bits set
 		SendPollReplyOnChange   = 1u << 1, // Bit-1
 		ReceiveDiagnostics      = 1u << 2, // Bit-2
 		UnicastDiagnostics      = 1u << 3, // Bit-3
@@ -100,24 +101,24 @@ export namespace artnet {
 		InvalidDmxLength
 	};
 
+	static_assert(std::tuple_size_v<decltype(DMX_BinaryPacket{}.dmxData)> == 512);
+	static_assert(sizeof(DMX_BinaryPacket) >= 18 + 512);
 	// Raw Art-Net packets to DMX data storage.
-	[[nodiscard]] std::expected<void, std::string>
-	ProcessDmxPacket(
+	auto ProcessDmxPacket(
 		std::span<const u8> buffer, // Art-Net UDP packet (Read-Only)
 		std::span<u8>       storage // DMX Storage Location (Mutable)
-	) noexcept {
+	) -> std::expected<u16, std::string> {
 
 		if (buffer.size() < MIN_PACKET_SIZE || buffer.size() > MAX_PACKET_SIZE) {
 			return std::unexpected("Invalid Size");
 		}
 		
-		DMX_BinaryPacket pkt{};
-		
 		if (std::memcmp(buffer.data(), &ARTNET_SIGNATURE, 8) != 0) {
 			return std::unexpected("Invalid Signature");
 		}
-
-		std::memcpy(&pkt, buffer.data(), std::min(buffer.size(), sizeof(DMX_BinaryPacket)));
+		
+		DMX_BinaryPacket pkt{};
+		std::memcpy(&pkt, buffer.data(), sizeof(DMX_BinaryPacket));
 
 		if (pkt.operation != Op::Dmx) {
 			return std::unexpected("Invalid Op Code");
@@ -127,12 +128,12 @@ export namespace artnet {
 			return std::unexpected("Invalid DMX length");
 		}
 
-		if (pkt.universeID < 3) {
-			return std::unexpected("Bad Universe");
+		if (pkt.universeID > 3) {
+			return pkt.universeID;
 		}
 
 		const std::size_t offset   = pkt.universeID * 520;
 		std::memcpy(storage.data() + offset, pkt.dmxData.data(), 512);
-		return {};
+		return pkt.universeID;
 	}
 }

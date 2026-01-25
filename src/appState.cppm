@@ -10,6 +10,7 @@ module;
 
 export module appState;
 import applog;
+import net.winsock;
 
 export namespace app {
 	std::string Version{"1.0.0"};
@@ -21,8 +22,10 @@ export namespace app {
 	bool debugMode{false};
 	bool RGBmode{false};
 	bool Unicast{false};
-	bool OpenConnection{false};
+	bool OpenConnection{true};
 	bool VsyncEnabled{true};
+
+	std::optional<winsock::Endpoint> NetConnection;
 
 	std::wstring Debug = L"";
 

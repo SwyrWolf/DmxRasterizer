@@ -15,7 +15,6 @@ export module render;
 import weretype;
 import shader;
 import appState;
-import artnet;
 
 export namespace Render {
 
@@ -163,7 +162,6 @@ export namespace Render {
 	}
 
 	void renderLoop(
-		ArtNet::UniverseLogger& logger,
 		Shader& shader,
 		GLuint dmxDataTexture,
 		GLuint framebuffer,
@@ -182,8 +180,9 @@ export namespace Render {
 		}
 
 		while (app::running) {
-			logger.waitForRender();
-			for (auto&& [src, dst] : std::views::zip(logger.dmxData, DmxTexture.ChannelsNormalized)) {
+			// logger.waitForRender();
+			app::times.waitForRender();
+			for (auto&& [src, dst] : std::views::zip(DmxTexture.DmxData, DmxTexture.ChannelsNormalized)) {
 				dst = as<f32>(src) / 255.0f;
 			}
 			

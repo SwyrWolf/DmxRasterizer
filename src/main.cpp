@@ -7,6 +7,9 @@
 #include <thread>
 #include <span>
 #include <expected>
+#include <optional>
+#include <format>
+#include <string>
 
 #include "./external/vendor/glad.h"
 #include <glfw3.h>
@@ -16,16 +19,33 @@
 #include "../../external/vendor/imGui/backends/imgui_impl_opengl3.h"
 
 import weretype;
+import fmtwrap;
 import appState;
 import shader;
-import artnet;
 import render;
 import render.ui;
 import net.artnet;
 import net.winsock;
 
+void NetworkThread(winsock::Endpoint& ep) {
+	std::array<u8, 1024> buffer{};
+	while (app::running) {
+		if (auto r = winsock::RecieveNetPacket(buffer, ep); !r) {
+			std::cerr << "Failed to recieve DMX data." << r.error() << "\n";
+			return;
+		}
+
+		if (auto r = artnet::ProcessDmxPacket(buffer, Render::DmxTexture.DmxData); !r) {
+			std::cerr << "Failed to process DMX data." << r.error() << "\n";
+			return;
+		} else { 
+			app::times.MeasureTimeDelta(r.value());
+			app::times.signalRender();
+		}
+	}
+}
+
 int main(int argc, char* argv[]) {
-	ArtNet::UniverseLogger dmxLogger;
 
 	enum ArgType {VERSION, PORT, DEBUG, BINDIP, CH9, UNKNOWN };
 	std::unordered_map<std::string, ArgType> argMap = {
@@ -51,6 +71,7 @@ int main(int argc, char* argv[]) {
 				case VERSION:
 				std::cout << "DMX Rasterizer: " << app::Version << std::endl;
 				break;
+
 				case PORT:
 				if (i + 1 < argc) {
 					if (auto port = [](std::string_view s) -> std::expected<int, std::string> {
@@ -58,7 +79,7 @@ int main(int argc, char* argv[]) {
 						auto [ptr, ec] = std::from_chars(s.data(), s.data() + s.size(), value);
 
 						if (ec != std::errc{} || ptr != s.data() + s.size()) return std::unexpected("invalid numeric port");
-						if (value < 1 || value > 65535) return std::unexpected("port out of range (1–65535)");
+						if (value < 1 || value > 65535) return std::unexpected("port out of range (1-65535)");
 
 						return value;
 					}(argv[++i])) {
@@ -93,7 +114,7 @@ int main(int argc, char* argv[]) {
 				case CH9:
 				app::RGBmode = true;
 				Render::DmxTexture.Universes = 9;
-				Render::DmxTexture.Channels = ArtNet::TOTAL_DMX_CHANNELS * 3;
+				Render::DmxTexture.Channels = 1560 * 3;
 				std::cout << "RGB mode on\n";
 				break;
 				
@@ -115,7 +136,6 @@ int main(int argc, char* argv[]) {
 			: "0.0.0.0";
 	}
 	
-	dmxLogger.dmxData.resize(Render::DmxTexture.Channels);
 	Render::DmxTexture.ChannelsNormalized.resize(Render::DmxTexture.Channels);
 
 	auto init = Render::InitGLFW(Render::DmxTexture)
@@ -130,34 +150,30 @@ int main(int argc, char* argv[]) {
 	Render::SetupVertexArrBuf();
 	Render::SetupTextureAndBuffer();
 	
-	winsock::Net net{};
-	winsock::AddressV4 addr{0, 5555};
-	std::string ipstr{app::ipStr.data(), app::ipStr.size()};
-
-	auto ipResult = winsock::ipv4_fromString(ipstr);
-	if (!ipResult) {
-		std::cerr << init.error() << "\n";
+	auto len = std::char_traits<char>::length(app::ipStr.data());
+	std::string ipStr{app::ipStr.data(), len};
+	
+	auto Addr = winsock::CreateAddress(ipStr, as<u16>(app::ipPort)).and_then(winsock::OpenNetworkSocket);
+	if (!Addr) {
+		std::cerr << Addr.error() << "\n";
 		return -1;
 	}
-	addr.ip = ipResult.value();
+	app::NetConnection = std::move(*Addr);
+	std::cerr << "IP Address: 0x" << std::hex << app::NetConnection->ip << "\n";
+	std::cerr << "IP Port: 0x" << std::hex << app::NetConnection->port << "\n";
+	app::Debug = std::format(L"Listening for Art-Net on [{}:{}]", std::wstring(ipStr.begin(), ipStr.end()), app::NetConnection->port);
 	
-	auto socketResult = net.OpenNetworkSocket(addr);
-	if (!socketResult) {
-		std::cerr << socketResult.error() << "\n";
-		return -1;
-	}
-	
-	SOCKET artNetSocket = setupArtNetSocket(app::ipPort, app::bindIp);
-	std::span<byte> dmxSpan(dmxLogger.dmxData);
-	std::thread artNetThread(receiveArtNetData, artNetSocket, dmxSpan, std::ref(dmxLogger));
+	// SOCKET artNetSocket = setupArtNetSocket(app::ipPort, app::bindIp);
+	// std::span<byte> dmxSpan(dmxLogger.dmxData);
+	// std::thread artNetThread(receiveArtNetData, artNetSocket, dmxSpan, std::ref(dmxLogger));
+	std::thread artNetThread(NetworkThread, std::ref(app::NetConnection.value()));
 
 	glfwMakeContextCurrent(nullptr);
 	std::thread renderThread(
 		Render::renderLoop,
-		std::ref(dmxLogger),
 		std::ref(shader),
 		Render::dmxDataTexture,
-		Render::framebuffer, 
+		Render::framebuffer,
 		Render::texture
 	);
 
@@ -176,9 +192,10 @@ int main(int argc, char* argv[]) {
 	}
 	
 	app::running = false;
-	dmxLogger.signalRender();
+	app::times.signalRender();
+	// dmxLogger.signalRender();
 	
-	closesocket(artNetSocket);
+	// closesocket(artNetSocket);
 	artNetThread.join();
 	renderThread.join();
 	guiThread.join();

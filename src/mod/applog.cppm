@@ -2,6 +2,8 @@ module;
 
 #include <chrono>
 #include <ranges>
+#include <atomic>
+#include <mutex>
 
 export module applog;
 import weretype;
@@ -31,8 +33,21 @@ export namespace applog {
 			return m_TimeDelta[i].count() * 1000.0;
 		}
 
+		void signalRender() {
+			renderReady.store(true, std::memory_order_release);
+			renderReady.notify_one();
+		}
+
+		void waitForRender() {
+			renderReady.wait(false, std::memory_order_acquire);
+			renderReady.store(false, std::memory_order_release);
+		}
+
 	private:
 		std::array<std::chrono::steady_clock::time_point, 9> m_TimeRecord{};
 		std::array<std::chrono::duration<double>, 9>         m_TimeDelta{};
+
+		std::mutex        dmxRenderPass;
+		std::atomic<bool> renderReady{true};
 	};
 }

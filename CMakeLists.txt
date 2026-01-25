@@ -39,7 +39,6 @@ set(MODULE_FILES
 	src/external/werelib/fmt.cppm
 
 	src/shader.cppm
-	src/artnet.cppm
 	src/appState.cppm
 
 	src/mod/net/artnet.cppm

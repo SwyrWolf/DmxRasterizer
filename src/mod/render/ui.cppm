@@ -150,7 +150,7 @@ export void ImGuiLoop() noexcept {
 		ImGui::SameLine();
 		ImGui::InputInt("##Port", &app::ipPort, 0, 0, ImGuiInputTextFlags_None);
 		
-		ImGui::BeginDisabled(true);
+		ImGui::BeginDisabled(app::OpenConnection);
 		if (ImGui::Button("Connect")) {
 			// if (net::Operational()) {
 			// 	net::OpenNetworkSocket(0, state::ipPort);
@@ -158,7 +158,7 @@ export void ImGuiLoop() noexcept {
 		}
 		ImGui::EndDisabled();
 		
-		ImGui::BeginDisabled(false);
+		ImGui::BeginDisabled(!app::OpenConnection);
 		ImGui::SameLine();
 		if (ImGui::Button("Disconnect")) {
 			// net::CloseNetworkSocket();
