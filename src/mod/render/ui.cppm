@@ -13,10 +13,23 @@ export module render.ui;
 import appState;
 import weretype;
 import net.artnet;
+import net.winsock;
 import fmtwrap;
+import netThread;
+
+// Embed raw RGBA8 bytes (W*H*4 bytes)
+constexpr u8 Icon32[] = {
+	#embed "../../../resource/dmxr32.rgba"
+};
+constexpr u8 Icon16[] = {
+	#embed "../../../resource/dmxr16.rgba"
+};
+constexpr GLFWimage imgs[2]{
+	{ 16, 16, const_cast<u8*>(Icon16)},
+	{ 32, 32, const_cast<u8*>(Icon32)},
+};
 
 int fbw{}, fbh{};
-
 struct PanelBox {
 	f32 x{}, y{}, w{}, h{};
 };
@@ -30,7 +43,6 @@ namespace grid { // layout
 	constexpr std::array col{ f32{400}, f32{300} };
 	constexpr std::array row{ f32{100}, f32{200}, f32{225} };
 }
-
 
 constexpr std::array Panels{
 	PanelBox{
@@ -62,22 +74,28 @@ constexpr std::array Panels{
 export bool SetupWindow() {
 	glfwDefaultWindowHints();
 	glfwWindowHint(GLFW_VISIBLE, GLFW_TRUE);
+	glfwWindowHint(GLFW_DECORATED, GLFW_TRUE);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
 	if (!app::GuiWindow) {
-		GLFWwindow* uiWindow = glfwCreateWindow(1280, 720, "DMX Rasterizer UI", nullptr, nullptr);
+		GLFWwindow* uiWindow = glfwCreateWindow(740, 560, "DMX Rasterizer | v1.0.0", nullptr, nullptr);
 		if (!uiWindow) {
 			std::cerr << "SetupWindow Failed!\n";
 			return false;
 		}
+
 		app::GuiWindow = uiWindow;
+		glfwMakeContextCurrent(app::GuiWindow);
+		
+		glfwSetWindowIcon(app::GuiWindow, 2, imgs);
 	}
+	glfwMakeContextCurrent(nullptr);
 	return true;
 }
 
-export void ImGuiLoop() noexcept {
+export void ImGuiLoop() {
 	glfwMakeContextCurrent(app::GuiWindow);
 
 	IMGUI_CHECKVERSION();
@@ -150,18 +168,27 @@ export void ImGuiLoop() noexcept {
 		ImGui::SameLine();
 		ImGui::InputInt("##Port", &app::ipPort, 0, 0, ImGuiInputTextFlags_None);
 		
-		ImGui::BeginDisabled(app::OpenConnection);
+		ImGui::BeginDisabled(app::NetConnection.has_value());
 		if (ImGui::Button("Connect")) {
-			// if (net::Operational()) {
-			// 	net::OpenNetworkSocket(0, state::ipPort);
-			// }
+			if (winsock::winsockInit()) {
+				auto Addr = winsock::CreateAddress(app::ipString(), as<u16>(app::ipPort)).and_then(winsock::OpenNetworkSocket);
+				if (!Addr) {
+					std::cerr << Addr.error() << "\n";
+					return;
+				}
+				app::NetConnection.emplace(std::move(*Addr));
+				::ContinueNetThread();
+			}
 		}
 		ImGui::EndDisabled();
 		
-		ImGui::BeginDisabled(!app::OpenConnection);
+		ImGui::BeginDisabled(!app::NetConnection.has_value());
 		ImGui::SameLine();
 		if (ImGui::Button("Disconnect")) {
-			// net::CloseNetworkSocket();
+			if (auto r = winsock::CloseNetworkSocket(app::NetConnection.value()); !r) {
+				std::cerr << "AHHHHHHHH IT BROKE!" << r.error() <<"\n";
+			}
+			app::NetConnection.reset();
 		}
 		ImGui::EndDisabled();
 		ImGui::End();
@@ -205,6 +232,8 @@ export void ImGuiLoop() noexcept {
 		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 		glfwSwapBuffers(app::GuiWindow);
 	}
+
+	std::cerr << "ImGui Ended!\n"; 
 	
 	glfwMakeContextCurrent(nullptr);
 	ImGui_ImplOpenGL3_Shutdown();

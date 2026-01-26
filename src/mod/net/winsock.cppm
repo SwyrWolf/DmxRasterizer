@@ -125,9 +125,9 @@ export namespace winsock {
 	}
 	
 	[[nodiscard]] std::expected<void, std::string>
-	CloseNetworkSocket(Endpoint& ep) noexcept {
-		if (openSock == INVALID_SOCKET) return std::unexpected("No open socket.");
-		if (closesocket(openSock) == SOCKET_ERROR) return std::unexpected("Failed to close socket.");
+	CloseNetworkSocket(Endpoint& ep) {
+		if (ep.Socket == INVALID_SOCKET) return std::unexpected("No open socket.");
+		if (closesocket(ep.Socket) == SOCKET_ERROR) return std::unexpected("Failed to close socket.");
 
 		m_Connection.reset();
 		ListenAddr = {};

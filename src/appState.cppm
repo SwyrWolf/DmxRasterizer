@@ -9,6 +9,7 @@ module;
 #include <glfw3.h>
 
 export module appState;
+import weretype;
 import applog;
 import net.winsock;
 
@@ -22,7 +23,6 @@ export namespace app {
 	bool debugMode{false};
 	bool RGBmode{false};
 	bool Unicast{false};
-	bool OpenConnection{true};
 	bool VsyncEnabled{true};
 
 	std::optional<winsock::Endpoint> NetConnection;
@@ -34,6 +34,11 @@ export namespace app {
 	std::optional<std::string> bindIp;
 
 	applog::UniverseTimer times{};
+
+	auto ipString() -> std::string {
+		auto len = std::char_traits<char>::length(ipStr.data());
+		return {app::ipStr.data(), len};
+	}
 
 	int FrameRateSel = 3;
 	using namespace std::chrono_literals;

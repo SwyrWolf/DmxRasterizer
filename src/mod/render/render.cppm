@@ -96,6 +96,8 @@ export namespace Render {
 	SetupShaderLoad() {
 		std::string_view fragShader = app::RGBmode ? Render::frag9_src : Render::frag_src;
 		std::string_view vertexShader = Render::vertex_src;
+		std::cerr << "Size of frag shader: " << fragShader.size() << "\n";
+		std::cerr << "Size of vertex shader: " << vertexShader.size() << "\n";
 		Shader shader(vertexShader, fragShader);
 		glUseProgram(shader.m_ID);
 		glUniform2f(glGetUniformLocation(shader.m_ID, "resolution"), Render::DmxTexture.Width, Render::DmxTexture.Height);
@@ -166,7 +168,7 @@ export namespace Render {
 		GLuint dmxDataTexture,
 		GLuint framebuffer,
 		GLuint texture
-	) noexcept {
+	) {
 		if (!app::SpoutWindow) {
 			std::cerr << "Render: No SpoutWindow";
 			return;
@@ -180,7 +182,6 @@ export namespace Render {
 		}
 
 		while (app::running) {
-			// logger.waitForRender();
 			app::times.waitForRender();
 			for (auto&& [src, dst] : std::views::zip(DmxTexture.DmxData, DmxTexture.ChannelsNormalized)) {
 				dst = as<f32>(src) / 255.0f;

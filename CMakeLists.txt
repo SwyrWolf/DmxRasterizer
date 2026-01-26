@@ -5,6 +5,7 @@ set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_CXX_SCAN_FOR_MODULES ON)
+set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG")
 
 set(APP_ICO "${CMAKE_SOURCE_DIR}/resource/icon.rc")
 add_compile_options(-Wno-c23-extensions)
@@ -34,12 +35,17 @@ FetchContent_MakeAvailable(spout2)
 set(SOURCE_FILES 
 	src/main.cpp
 )
+set_source_files_properties(${SOURCE_FILES} PROPERTIES
+	COMPILE_OPTIONS "-fno-exceptions"
+)
+
 set(MODULE_FILES
 	src/external/werelib/weretype.cppm
 	src/external/werelib/fmt.cppm
 
 	src/shader.cppm
 	src/appState.cppm
+	src/netThread.cppm
 
 	src/mod/net/artnet.cppm
 	src/mod/net/winsock.cppm
@@ -48,6 +54,9 @@ set(MODULE_FILES
 	src/mod/render/ui.cppm
 	
 	src/mod/applog.cppm
+)
+set_source_files_properties(${MODULE_FILES} PROPERTIES
+	COMPILE_OPTIONS "-fno-exceptions"
 )
 
 set(IMGUI_SRC
@@ -58,11 +67,14 @@ set(IMGUI_SRC
 	src/external/vendor/imgui/backends/imgui_impl_glfw.cpp
 	src/external/vendor/imgui/backends/imgui_impl_opengl3.cpp
 )
+add_library(imgui STATIC ${IMGUI_SRC})
+target_include_directories(imgui PUBLIC src/external/vendor/imGui src/external/vendor/imGui/backends)
+target_link_libraries(imgui PUBLIC glfw)
 
 add_library(glad STATIC src/external/vendor/glad.c)
 target_include_directories(glad PUBLIC src/external/vendor)
 
-add_executable(${PROJECT_NAME} ${SOURCE_FILES} ${IMGUI_SRC} ${APP_ICO})
+add_executable(${PROJECT_NAME} ${SOURCE_FILES} ${APP_ICO})
 
 target_sources(${PROJECT_NAME} PRIVATE
 	FILE_SET cxx_modules TYPE CXX_MODULES FILES
@@ -80,5 +92,6 @@ target_link_libraries(
 	gdi32.lib
 	glad
 	glfw
+	imgui
 	Spout_static
 )

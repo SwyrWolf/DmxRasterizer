@@ -3,7 +3,6 @@ module;
 #include <chrono>
 #include <ranges>
 #include <atomic>
-#include <mutex>
 
 export module applog;
 import weretype;
@@ -11,8 +10,12 @@ import weretype;
 export namespace applog {
 
 	class UniverseTimer {
-	public:
+		std::array<std::chrono::steady_clock::time_point, 9> m_TimeRecord{};
+		std::array<std::chrono::duration<double>, 9>         m_TimeDelta{};
 
+		std::atomic<bool> renderReady{true};
+
+	public:
 		void MeasureTimeDelta(u16 universeID) {
 			auto now = std::chrono::steady_clock::now();
 
@@ -42,12 +45,5 @@ export namespace applog {
 			renderReady.wait(false, std::memory_order_acquire);
 			renderReady.store(false, std::memory_order_release);
 		}
-
-	private:
-		std::array<std::chrono::steady_clock::time_point, 9> m_TimeRecord{};
-		std::array<std::chrono::duration<double>, 9>         m_TimeDelta{};
-
-		std::mutex        dmxRenderPass;
-		std::atomic<bool> renderReady{true};
 	};
 }
