@@ -95,3 +95,13 @@ target_link_libraries(
 	imgui
 	Spout_static
 )
+
+# Hide console only in Release
+set_target_properties(DmxRasterizer PROPERTIES
+  WIN32_EXECUTABLE $<CONFIG:Release>
+)
+
+# In Release, use main() as entrypoint even under GUI subsystem
+target_link_options(DmxRasterizer PRIVATE
+  $<$<CONFIG:Release>:-Wl,/ENTRY:mainCRTStartup>
+)
