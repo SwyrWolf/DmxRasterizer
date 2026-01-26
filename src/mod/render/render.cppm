@@ -92,13 +92,11 @@ export namespace Render {
 		glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	}
 
-	[[nodiscard]] Shader
-	SetupShaderLoad() {
-		std::string_view fragShader = app::RGBmode ? Render::frag9_src : Render::frag_src;
-		std::string_view vertexShader = Render::vertex_src;
-		std::cerr << "Size of frag shader: " << fragShader.size() << "\n";
-		std::cerr << "Size of vertex shader: " << vertexShader.size() << "\n";
-		Shader shader(vertexShader, fragShader);
+	[[nodiscard]] auto SetupShaderLoad(std::string_view vert, std::string_view frag) -> Shader {
+		// std::string_view fragShader = app::RGBmode ? Render::frag9_src : Render::frag_src;
+		// std::string_view fragShader = Render::frag_src;
+		// std::string_view vertexShader = Render::vertex_src;
+		Shader shader(vert, frag);
 		glUseProgram(shader.m_ID);
 		glUniform2f(glGetUniformLocation(shader.m_ID, "resolution"), Render::DmxTexture.Width, Render::DmxTexture.Height);
 
@@ -127,8 +125,7 @@ export namespace Render {
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, Render::texture, 0);
 	}
 
-	[[nodiscard]] std::expected<void, std::string>
-	CreateGUI() {
+	auto CreateGUI() -> std::expected<void, std::string> {
 		glfwDefaultWindowHints();
 		glfwWindowHint(GLFW_VISIBLE, GLFW_TRUE);
 		glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);

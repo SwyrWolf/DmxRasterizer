@@ -97,11 +97,11 @@ target_link_libraries(
 )
 
 # Hide console only in Release
-set_target_properties(DmxRasterizer PROPERTIES
+set_target_properties(${PROJECT_NAME} PROPERTIES
   WIN32_EXECUTABLE $<CONFIG:Release>
 )
 
 # In Release, use main() as entrypoint even under GUI subsystem
-target_link_options(DmxRasterizer PRIVATE
+target_link_options(${PROJECT_NAME} PRIVATE
   $<$<CONFIG:Release>:-Wl,/ENTRY:mainCRTStartup>
 )

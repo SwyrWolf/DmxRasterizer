@@ -64,7 +64,7 @@ int main(int argc, char* argv[]) {
 	}
 
 	Render::SetupDmxDataTexture();
-	auto shader = Render::SetupShaderLoad();
+	auto shader3uni = Render::SetupShaderLoad(Render::vertex_src, Render::frag_src);
 	Render::SetupVertexArrBuf();
 	Render::SetupTextureAndBuffer();
 	
@@ -87,7 +87,7 @@ int main(int argc, char* argv[]) {
 	glfwMakeContextCurrent(nullptr);
 	std::thread renderThread(
 		Render::renderLoop,
-		std::ref(shader),
+		std::ref(shader3uni),
 		Render::dmxDataTexture,
 		Render::framebuffer,
 		Render::texture
@@ -108,6 +108,7 @@ int main(int argc, char* argv[]) {
 	}
 	
 	app::running = false;
+	artNetThread.request_stop();
 	app::times.signalRender();
 	renderThread.join();
 	guiThread.join();
