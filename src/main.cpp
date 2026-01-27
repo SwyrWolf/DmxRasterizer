@@ -64,7 +64,11 @@ int main(int argc, char* argv[]) {
 	}
 
 	Render::SetupDmxDataTexture();
-	auto shader3uni = Render::SetupShaderLoad(Render::vertex_src, Render::frag_src);
+	std::string_view vrt = Render::vertex_src;
+	std::string_view frg = Render::frag_src;
+	std::string_view frg9 = Render::frag9_src;
+	auto shader3uni = Render::SetupShaderLoad(vrt, frg);
+	auto shader9uni = Render::SetupShaderLoad(vrt, frg9);
 	Render::SetupVertexArrBuf();
 	Render::SetupTextureAndBuffer();
 	

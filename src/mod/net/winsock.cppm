@@ -38,11 +38,6 @@ export namespace winsock {
 	////////////////////////////////////////
 	WSADATA g_WsaData{};
 	bool g_WinsockStatus{false};
-
-	std::optional<Endpoint> m_Connection;
-	SOCKET openSock{INVALID_SOCKET};
-	sockaddr_in ListenAddr{};
-	sockaddr_in SenderAddr{};
 	////////////////////////////////////////
 
 	// Global initialized to verify winsock is functioning.
@@ -55,8 +50,7 @@ export namespace winsock {
 	}
 
 	// Validate_ipAddr("127.0.0.1") to verify ipv4 address and return as u32
-	auto validate_ipAddr(const std::string& strInput)
-	-> std::expected<u32, std::string> {
+	auto validate_ipAddr(const std::string& strInput) -> std::expected<u32, std::string> {
 		u32 addr_net{};
 		if (InetPtonA(AF_INET, strInput.c_str(), &addr_net) != 1) {
 			return std::unexpected("Invalid IP address");
@@ -93,8 +87,7 @@ export namespace winsock {
 		return Endpoint{ *ip, port };
 	}
 	
-	auto OpenNetworkSocket(Endpoint&& ep)
-	-> std::expected<Endpoint, std::string> {
+	auto OpenNetworkSocket(Endpoint&& ep) -> std::expected<Endpoint, std::string> {
 		if (auto r = winsockInit(); !r) return std::unexpected(r.error());
 
 		ep.Socket = WSASocketW(AF_INET, SOCK_DGRAM, 0, nullptr, 0, WSA_FLAG_OVERLAPPED);
@@ -124,24 +117,17 @@ export namespace winsock {
 		return ep;
 	}
 	
-	[[nodiscard]] std::expected<void, std::string>
-	CloseNetworkSocket(Endpoint& ep) {
+	auto CloseNetworkSocket(Endpoint& ep) -> std::expected<void, std::string> {
 		if (ep.Socket == INVALID_SOCKET) return std::unexpected("No open socket.");
 		if (closesocket(ep.Socket) == SOCKET_ERROR) return std::unexpected("Failed to close socket.");
 
-		m_Connection.reset();
-		ListenAddr = {};
-		SenderAddr = {};
-		openSock = INVALID_SOCKET;
-		constexpr int SenderAddrSize = sizeof(SenderAddr);
 		return {};
 	}
 
-	[[nodiscard]] std::expected<void, std::string>
-	RecieveNetPacket(std::span<u8> dst, Endpoint& ep) {
+	auto RecieveNetPacket(std::span<u8> dst, Endpoint& ep) -> std::expected<void, std::string> {
 		
-		int SenderAddrSize = sizeof(SenderAddr);
-		int errCode = recvfrom(ep.Socket, raw<char*>(dst.data()), dst.size(), 0, raw<sockaddr*>(&SenderAddr), &SenderAddrSize);
+		int SenderAddrSize = sizeof(ep.SenderAddr);
+		int errCode = recvfrom(ep.Socket, raw<char*>(dst.data()), dst.size(), 0, raw<sockaddr*>(&ep.SenderAddr), &SenderAddrSize);
 		if (errCode == SOCKET_ERROR) {
 			return std::unexpected("Failed to recieve packet.");
 		}
