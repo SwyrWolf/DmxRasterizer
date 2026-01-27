@@ -19,6 +19,11 @@ switch ($pMode) {
 		ninja -C build
 		return
 	}
+	"--run" {
+		Write-Host "Running Program"
+		lldb $exePath
+		return
+	}
 	default {
 		if ($pMode -match '1') {
 			Write-Host "Generating debug Build with clang Setup!"

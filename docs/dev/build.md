@@ -23,3 +23,6 @@
 
 # Quick tip
 - On Windows 11 you can quickly get to editing your envrionment variables UI by writing `rundll32.exe sysdm.cpl,EditEnvironmentVariables` in your run prompt
+
+## Using LLDB
+- Note: This requires python 3.10 to be installed to say anything. `winget install Python.Python.3.10`
