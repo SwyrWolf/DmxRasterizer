@@ -26,3 +26,21 @@
 
 ## Using LLDB
 - Note: This requires python 3.10 to be installed to say anything. `winget install Python.Python.3.10`
+Getting LLDB to work with VSCode:
+- Get the extension `llvm-vs-code-extensions.lldb-dap`
+- Create a launch config:
+```json
+{
+	"version": "0.2.0",
+	"configurations": [
+		{
+			"name": "Launch LLDB",
+			"type": "lldb-dap",
+			"request": "launch",
+			"program": "${workspaceFolder}/build/DmxRasterizer.exe",
+			"args": ["-d"],
+			"cwd": "${workspaceFolder}"
+		}
+	]
+}
+```
