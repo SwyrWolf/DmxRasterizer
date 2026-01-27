@@ -41,10 +41,9 @@ export namespace Render {
 	struct DmxShaderData {
 		int Width{1920};
 		int Height{208};
-		int Channels{1560};
-		int Universes{3};
-		std::vector<u8> DmxData = std::vector<u8>(1560);
-		std::vector<f32> ChannelsNormalized = std::vector<f32>(1560);
+		int Channels{1560 * 3}; // 9 universe 4680 / 3 1560
+		std::vector<u8> DmxData = std::vector<u8>(1560*3);
+		std::vector<f32> ChannelsNormalized = std::vector<f32>(1560*3);
 	};
 	DmxShaderData DmxTexture{};
 
@@ -92,13 +91,13 @@ export namespace Render {
 		glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	}
 
-	[[nodiscard]] auto SetupShaderLoad(std::string_view vert, std::string_view frag) -> Shader {
+	[[nodiscard]] auto SetupShaderLoad(std::string_view vert, std::string_view frag) -> std::unique_ptr<Shader> {
 		// std::string_view fragShader = app::RGBmode ? Render::frag9_src : Render::frag_src;
 		// std::string_view fragShader = Render::frag_src;
 		// std::string_view vertexShader = Render::vertex_src;
-		Shader shader(vert, frag);
-		glUseProgram(shader.m_ID);
-		glUniform2f(glGetUniformLocation(shader.m_ID, "resolution"), Render::DmxTexture.Width, Render::DmxTexture.Height);
+		auto shader = std::make_unique<Shader>(vert, frag);
+		glUseProgram(shader->m_ID);
+		glUniform2f(glGetUniformLocation(shader->m_ID, "resolution"), Render::DmxTexture.Width, Render::DmxTexture.Height);
 
 		return shader;
 	}
@@ -161,7 +160,7 @@ export namespace Render {
 	}
 
 	void renderLoop(
-		Shader& shader,
+		std::array<std::unique_ptr<Shader>,2>& shader,
 		GLuint dmxDataTexture,
 		GLuint framebuffer,
 		GLuint texture
@@ -194,12 +193,13 @@ export namespace Render {
 			glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 			glClear(GL_COLOR_BUFFER_BIT);
 			
-			shader.use();
+			u64 s = app::RGBmode ? 1 : 0;
+			shader[s]->use();
 			glBindVertexArray(Render::VAO);
 			
 			glActiveTexture(GL_TEXTURE0);
 			glBindTexture(GL_TEXTURE_1D, dmxDataTexture);
-			glUniform1i(glGetUniformLocation(shader.m_ID, "dmxDataTexture"), 0);
+			glUniform1i(glGetUniformLocation(shader[s]->m_ID, "dmxDataTexture"), 0);
 			
 			glDrawArrays(GL_TRIANGLES, 0, 6);
 			sender.SendTexture(texture, GL_TEXTURE_2D, DmxTexture.Width, DmxTexture.Height);

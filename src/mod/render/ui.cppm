@@ -95,7 +95,7 @@ export bool SetupWindow() {
 	return true;
 }
 
-export void ImGuiLoop() {
+export void ImGuiLoop(int& Channels) {
 	glfwMakeContextCurrent(app::GuiWindow);
 
 	IMGUI_CHECKVERSION();
@@ -201,10 +201,12 @@ export void ImGuiLoop() {
 		std::string uniStatus;
 		uniStatus.reserve(256);
 
-		ImGui::Checkbox(
+		if (ImGui::Checkbox(
 			fmt::cat("9 Universe Mode: ", app::RGBmode ? "Enabled" : "Disabled").c_str(),
 			&app::RGBmode
-		);
+		)) {
+			Channels = app::RGBmode ? 4680 : 1560;
+		}
 
 		for (int i : std::views::iota(0, 9)) {
 			uniStatus += fmt::cat("UNI-0", i, ": ",app::times.GetTimeDeltaMsAt(i), "ms\n");

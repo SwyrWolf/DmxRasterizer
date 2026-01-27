@@ -64,11 +64,10 @@ int main(int argc, char* argv[]) {
 	}
 
 	Render::SetupDmxDataTexture();
-	std::string_view vrt = Render::vertex_src;
-	std::string_view frg = Render::frag_src;
-	std::string_view frg9 = Render::frag9_src;
-	auto shader3uni = Render::SetupShaderLoad(vrt, frg);
-	auto shader9uni = Render::SetupShaderLoad(vrt, frg9);
+	std::array<std::unique_ptr<Shader>, 2> shader {
+		Render::SetupShaderLoad(Render::vertex_src, Render::frag_src),
+		Render::SetupShaderLoad(Render::vertex_src, Render::frag9_src),
+	};
 	Render::SetupVertexArrBuf();
 	Render::SetupTextureAndBuffer();
 	
@@ -91,7 +90,7 @@ int main(int argc, char* argv[]) {
 	glfwMakeContextCurrent(nullptr);
 	std::thread renderThread(
 		Render::renderLoop,
-		std::ref(shader3uni),
+		std::ref(shader),
 		Render::dmxDataTexture,
 		Render::framebuffer,
 		Render::texture
@@ -104,7 +103,7 @@ int main(int argc, char* argv[]) {
 		return -1;
 	}
 	
-	std::thread guiThread(ImGuiLoop);
+	std::thread guiThread(ImGuiLoop, std::ref(Render::DmxTexture.Channels));
 	
 	//Main thread loop
 	while (!glfwWindowShouldClose(app::GuiWindow)) {

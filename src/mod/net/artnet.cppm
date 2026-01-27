@@ -128,7 +128,7 @@ export namespace artnet {
 			return std::unexpected("Invalid DMX length");
 		}
 
-		if (pkt.universeID > 3) {
+		if (pkt.universeID > 9) {
 			return pkt.universeID;
 		}
 
