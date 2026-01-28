@@ -73,6 +73,7 @@ constexpr std::array Panels{
 
 export bool SetupWindow() {
 	glfwDefaultWindowHints();
+	glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
 	glfwWindowHint(GLFW_VISIBLE, GLFW_TRUE);
 	glfwWindowHint(GLFW_DECORATED, GLFW_TRUE);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
@@ -80,7 +81,7 @@ export bool SetupWindow() {
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
 	if (!app::GuiWindow) {
-		GLFWwindow* uiWindow = glfwCreateWindow(740, 560, "DMX Rasterizer | v1.0.0", nullptr, nullptr);
+		GLFWwindow* uiWindow = glfwCreateWindow(735, 565, "DMX Rasterizer | v1.0.0", nullptr, nullptr);
 		if (!uiWindow) {
 			std::cerr << "SetupWindow Failed!\n";
 			return false;
