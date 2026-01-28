@@ -124,41 +124,6 @@ export namespace Render {
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, Render::texture, 0);
 	}
 
-	auto CreateGUI() -> std::expected<void, std::string> {
-		glfwDefaultWindowHints();
-		glfwWindowHint(GLFW_VISIBLE, GLFW_TRUE);
-		glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-		glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-		glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-
-		GLFWwindow* uiWindow = glfwCreateWindow(1280, 720, "DMX Rasterizer UI", nullptr, nullptr);
-		if (!uiWindow) return std::unexpected("glfwCreateWindow(UI) failed");
-
-		glfwMakeContextCurrent(uiWindow);
-
-		if (!gladLoadGLLoader(raw<GLADloadproc>(glfwGetProcAddress))) {
-			glfwDestroyWindow(uiWindow);
-			return std::unexpected("gladLoadGLLoader failed for UI");
-		}
-
-		if (!g_imguiInitialized) {
-			IMGUI_CHECKVERSION();
-			ImGui::CreateContext();
-			ImGui::StyleColorsDark();
-			
-			ImGuiStyle& style = ImGui::GetStyle();
-			style.Colors[ImGuiCol_WindowBg] = ImVec4(0.12f, 0.12f, 0.12f, 1.0f);
-
-			ImGui_ImplGlfw_InitForOpenGL(uiWindow, true);
-			ImGui_ImplOpenGL3_Init("#version 330 core");
-
-			g_imguiInitialized = true;
-		}
-
-		app::GuiWindow = uiWindow;
-		return {};
-	}
-
 	void renderLoop(
 		std::array<std::unique_ptr<Shader>,2>& shader,
 		GLuint dmxDataTexture,

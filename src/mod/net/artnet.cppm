@@ -7,8 +7,6 @@ module;
 #include <string>
 #include <expected>
 #include <span>
-#include <algorithm>
-#include <iostream>
 
 export module net.artnet;
 import weretype;
