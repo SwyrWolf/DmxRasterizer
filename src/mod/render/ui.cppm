@@ -160,7 +160,10 @@ export void ImGuiLoop(int& Channels) {
 		}
 		ImGui::EndDisabled();
 		
-		ImGui::SameLine(); ImGui::Checkbox("Vsync", &app::VsyncEnabled);
+		ImGui::SameLine(); 
+		if (ImGui::Checkbox("Vsync", &app::VsyncEnabled)) {
+			glfwSwapInterval(app::VsyncEnabled ? 1 : 0);
+		};
 		ImGui::Text("");
 		ImGui::Text("Network");
 		ImGui::SetNextItemWidth(155.0f);

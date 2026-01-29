@@ -4,7 +4,6 @@ module;
 
 #include <cstring>
 #include <array>
-#include <string>
 #include <expected>
 #include <span>
 
@@ -14,7 +13,8 @@ import weretype;
 export namespace artnet {
 	constexpr std::array<u8, 8> ARTNET_SIGNATURE = {'A','r','t','-','N','e','t',0x00}; //Art-Net [0-8] Fixed first 8 bytes of an art-net m_packet
 	constexpr u16 ARTNET_VERSION = 0x000E; // Fixed version number 1.4 or "14" [u8:ProtVerHi & u8:ProtVerLo]
-	constexpr u16 ARTNET_PORT = 0x1936; // AKA :6454
+	constexpr u16 ARTNET_PORT    = 0x1936; // AKA :6454
+	constexpr u64 DMX_SIZE       = 512;
 
 	// --- Art-Net operation codes ---
 	enum class Op : u16 {
@@ -59,25 +59,22 @@ export namespace artnet {
 
 	// --- Other ArtNet related messages ---
 	enum class NodeFlag : u8 {
-		None                    = 0x00,    // no bits set
-		SendPollReplyOnChange   = 1u << 1, // Bit-1
-		ReceiveDiagnostics      = 1u << 2, // Bit-2
-		UnicastDiagnostics      = 1u << 3, // Bit-3
-		DisableVLC              = 1u << 4, // Bit-4
-		EnableTargetedMode      = 1u << 5, // Bit-5
+		None                  = 0x00,    // no bits set
+		SendPollReplyOnChange = 1u << 1, // Bit-1
+		ReceiveDiagnostics    = 1u << 2, // Bit-2
+		UnicastDiagnostics    = 1u << 3, // Bit-3
+		DisableVLC            = 1u << 4, // Bit-4
+		EnableTargetedMode    = 1u << 5, // Bit-5
 		// Bits 6 & 7 are reserved and must remain zero
 	};
 
 	enum class DiagPriority : u8 { //The lowest priority of diagnostics message that should be sent.
-		Low         = 0x10, // Low priority message.
-		Med         = 0x40, // Medium priority message.
-		High        = 0x80, // High priority message.
-		Critical    = 0xe0, // Critical priority message.
-		Volatile    = 0xf0, // Displayed in a single line in DMX-Workshop diagnostics display. All other types are displayed in a list box.
+		Low       = 0x10, // Low priority message.
+		Med       = 0x40, // Medium priority message.
+		High      = 0x80, // High priority message.
+		Critical  = 0xe0, // Critical priority message.
+		Volatile  = 0xf0, // Displayed in a single line in DMX-Workshop diagnostics display. All other types are displayed in a list box.
 	};
-
-	constexpr std::size_t MIN_PACKET_SIZE = 18;
-	constexpr std::size_t MAX_PACKET_SIZE = 1024;
 
 	#pragma pack(push, 1)
 	struct DMX_BinaryPacket {
@@ -92,45 +89,48 @@ export namespace artnet {
 	};
 	#pragma pack(pop)
 
+	// --- INTERFACE ---
 	enum class Err {
-		InvalidPacketSize,
-		InvalidSignature,
-		InvalidOpCode,
-		InvalidDmxLength
+		PacketSize_TooLarge,
+		PacketSize_TooSmall,
+		Signature,
+		OpCode,
+		DmxLength,
+		SmallBuffer
 	};
 
-	static_assert(std::tuple_size_v<decltype(DMX_BinaryPacket{}.dmxData)> == 512);
-	static_assert(sizeof(DMX_BinaryPacket) >= 18 + 512);
-	// Raw Art-Net packets to DMX data storage.
-	auto ProcessDmxPacket(
-		std::span<const u8> buffer, // Art-Net UDP packet (Read-Only)
-		std::span<u8>       storage // DMX Storage Location (Mutable)
-	) -> std::expected<u16, std::string> {
+	constexpr std::size_t MIN_PACKET_SIZE = 18;
+	constexpr std::size_t MAX_PACKET_SIZE = 1024;
 
-		if (buffer.size() < MIN_PACKET_SIZE || buffer.size() > MAX_PACKET_SIZE) {
-			return std::unexpected("Invalid Size");
-		}
-		
-		if (std::memcmp(buffer.data(), &ARTNET_SIGNATURE, 8) != 0) {
-			return std::unexpected("Invalid Signature");
+	// Artnet packet buffer -> DMX Storage
+	auto ProcessDmxPacket(
+		std::span<const u8> buffer,       // Art-Net UDP packet (Read-Only)
+		std::span<u8>       storage,      // DMX Storage Location (Mutable)
+		std::size_t         UniOffset = 0 // Additional to the 512 + offset
+	) -> std::expected<u16, Err> {
+
+		if (buffer.size() < MIN_PACKET_SIZE) {
+			return std::unexpected(Err::PacketSize_TooSmall);
+		} if (buffer.size() > MAX_PACKET_SIZE) {
+			return std::unexpected(Err::PacketSize_TooLarge);
+		} if (std::memcmp(buffer.data(), &ARTNET_SIGNATURE, 8) != 0) {
+			return std::unexpected(Err::Signature);
 		}
 		
 		DMX_BinaryPacket pkt{};
 		std::memcpy(&pkt, buffer.data(), sizeof(DMX_BinaryPacket));
 
 		if (pkt.operation != Op::Dmx) {
-			return std::unexpected("Invalid Op Code");
-		}
-
-		if (pkt.dmxLength > 512 || (pkt.dmxLength % 2) != 0) {
-			return std::unexpected("Invalid DMX length");
+			return std::unexpected(Err::OpCode);
+		} if (pkt.dmxLength > 512 || (pkt.dmxLength % 2) != 0) {
+			return std::unexpected(Err::DmxLength);
 		}
 
 		if (pkt.universeID > 9) {
 			return pkt.universeID;
-		}
-
-		const std::size_t offset   = pkt.universeID * 520;
+		}   
+  
+		const std::size_t offset   = pkt.universeID * (DMX_SIZE + UniOffset);
 		std::memcpy(storage.data() + offset, pkt.dmxData.data(), 512);
 		return pkt.universeID;
 	}

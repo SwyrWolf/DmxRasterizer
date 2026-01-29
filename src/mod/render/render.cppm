@@ -5,9 +5,9 @@ module;
 #include <ranges>
 
 #include "../../external/vendor/glad.h"
-#include "../../external/vendor/imGui/imgui.h"
-#include "../../external/vendor/imGui/backends/imgui_impl_glfw.h"
-#include "../../external/vendor/imGui/backends/imgui_impl_opengl3.h"
+// #include "../../external/vendor/imGui/imgui.h"
+// #include "../../external/vendor/imGui/backends/imgui_impl_glfw.h"
+// #include "../../external/vendor/imGui/backends/imgui_impl_opengl3.h"
 #include <glfw3.h>
 #include <SpoutGL/SpoutSender.h>
 
@@ -51,8 +51,7 @@ export namespace Render {
 	GLuint dmxDataTexture{}, VAO{}, VBO{}, texture{}, framebuffer{};
 
 	// Initialize GLFW window first
-	[[nodiscard]] std::expected<void, std::string>
-	InitGLFW(DmxShaderData& ds) {
+	auto InitGLFW(DmxShaderData& ds) -> std::expected<void, std::string> {
 
 		if (!glfwInit()) {
 			return std::unexpected("Failed to initialize GLFW");
@@ -76,8 +75,7 @@ export namespace Render {
 	}
 
 	// After GLFW initialized, Initialize the GLAD GL loader
-	[[nodiscard]] std::expected<void, std::string>
-	InitGLAD() {
+	auto InitGLAD() -> std::expected<void, std::string> {
 		if (!gladLoadGLLoader(raw<GLADloadproc>(glfwGetProcAddress))) { 
 			return std::unexpected("Failed to initialize Glad");
 		}
@@ -92,9 +90,6 @@ export namespace Render {
 	}
 
 	[[nodiscard]] auto SetupShaderLoad(std::string_view vert, std::string_view frag) -> std::unique_ptr<Shader> {
-		// std::string_view fragShader = app::RGBmode ? Render::frag9_src : Render::frag_src;
-		// std::string_view fragShader = Render::frag_src;
-		// std::string_view vertexShader = Render::vertex_src;
 		auto shader = std::make_unique<Shader>(vert, frag);
 		glUseProgram(shader->m_ID);
 		glUniform2f(glGetUniformLocation(shader->m_ID, "resolution"), Render::DmxTexture.Width, Render::DmxTexture.Height);
