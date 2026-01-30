@@ -1,0 +1,15 @@
+{
+  "version": 6,
+  "configurePresets": [
+    {
+      "name": "ninja-clang-debug",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/out/build/${presetName}",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_C_COMPILER": "C:/Program Files/LLVM/bin/clang.exe",
+        "CMAKE_CXX_COMPILER": "C:/Program Files/LLVM/bin/clang++.exe"
+      }
+    }
+  ]
+}

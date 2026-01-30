@@ -1,8 +1,10 @@
 /.cache
+/.vs
 /.vscode
 /.idea
 dist
 /build
+/out
 /cmake-build-debug
 /cmake-build-release
 imgui.ini

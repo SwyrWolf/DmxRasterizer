@@ -63,11 +63,15 @@ int main(int argc, char* argv[]) {
 		return -1;
 	}
 
+	std::cout << "Main Frag length: " << sizeof(Render::frag_src) << "\n";
+	std::cout << "Main Frag9 length: " << sizeof(Render::frag9_src) << "\n";
+
 	Render::SetupDmxDataTexture();
 	std::array<std::unique_ptr<Shader>, 2> shader {
 		Render::SetupShaderLoad(Render::vertex_src, Render::frag_src),
 		Render::SetupShaderLoad(Render::vertex_src, Render::frag9_src),
 	};
+
 	Render::SetupVertexArrBuf();
 	Render::SetupTextureAndBuffer();
 	
@@ -107,7 +111,7 @@ int main(int argc, char* argv[]) {
 	
 	//Main thread loop
 	while (!glfwWindowShouldClose(app::GuiWindow)) {
-		glfwPollEvents();
+		glfwWaitEvents();  // Blocks until an event occurs (CPU efficient)
 	}
 	
 	app::running = false;

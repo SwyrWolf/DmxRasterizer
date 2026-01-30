@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 4.2.0)
+cmake_minimum_required(VERSION 4.1.0)
 project(DmxRasterizer VERSION 1.0.0)
 
 set(CMAKE_CXX_STANDARD 23)
@@ -6,6 +6,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_CXX_SCAN_FOR_MODULES ON)
 set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG")
+set(CMAKE_CXX_FLAGS_DEBUG "-g -O0")
 
 set(APP_ICO "${CMAKE_SOURCE_DIR}/resource/icon.rc")
 add_compile_options(-Wno-c23-extensions)
@@ -23,12 +24,6 @@ FetchContent_MakeAvailable(glfw)
 FetchContent_Declare(
 	spout2
 	URL https://github.com/leadedge/Spout2/archive/refs/tags/2.007.015.zip
-	# Direct link because FetchContent will download the entire repo history (GIT_SHALLOW is limited)
-	# DOWNLOAD_EXTRACT_TIMESTAMP TRUE
-	# GIT_REPOSITORY https://github.com/leadedge/Spout2.git
-	# GIT_TAG fc63ac2c16918ffa1d3384cddfba2bbc70650bb4 # 2.007.015
-	# GIT_SHALLOW TRUE
-	# GIT_PROGRESS TRUE
 )
 FetchContent_MakeAvailable(spout2)
 
@@ -90,6 +85,7 @@ target_link_libraries(
 	${PROJECT_NAME} PRIVATE
 	opengl32.lib
 	gdi32.lib
+	ws2_32.lib
 	glad
 	glfw
 	imgui

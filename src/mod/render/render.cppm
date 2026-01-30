@@ -3,11 +3,9 @@ module;
 #include <expected>
 #include <vector>
 #include <ranges>
+#include <string>
 
 #include "../../external/vendor/glad.h"
-// #include "../../external/vendor/imGui/imgui.h"
-// #include "../../external/vendor/imGui/backends/imgui_impl_glfw.h"
-// #include "../../external/vendor/imGui/backends/imgui_impl_opengl3.h"
 #include <glfw3.h>
 #include <SpoutGL/SpoutSender.h>
 
@@ -18,15 +16,20 @@ import appState;
 
 export namespace Render {
 
-	constexpr char vertex_src[] = {
-		#embed "../shaders/vertex.glsl"
+	constexpr char vertex_src_data[] = {
+		#embed "../../../shaders/vertex.glsl"
 	};
-	constexpr char frag_src[] = {
-		#embed "../shaders/frag.glsl"
+	constexpr std::string_view vertex_src{vertex_src_data, std::size(vertex_src_data)};
+	
+	constexpr char frag_src_data[] = {
+		#embed "../../../shaders/frag.glsl"
 	};
-	constexpr char frag9_src[] = {
-		#embed "../shaders/frag9.glsl"
+	constexpr std::string_view frag_src{frag_src_data, std::size(frag_src_data)};
+	
+	constexpr char frag9_src_data[] = {
+		#embed "../../../shaders/frag9.glsl"
 	};
+	constexpr std::string_view frag9_src{frag9_src_data, std::size(frag9_src_data)};
 
 	f32 vertices[] = {
 		-1.0f,  1.0f,  0.0f, 1.0f, // Top-left
@@ -41,9 +44,8 @@ export namespace Render {
 	struct DmxShaderData {
 		int Width{1920};
 		int Height{208};
-		int Channels{1560 * 3}; // 9 universe 4680 / 3 1560
-		std::vector<u8> DmxData = std::vector<u8>(1560*3);
-		std::vector<f32> ChannelsNormalized = std::vector<f32>(1560*3);
+		int Channels{4680}; // 9 universe 4680 / 3 1560
+		std::vector<u8> DmxData = std::vector<u8>(4680);
 	};
 	DmxShaderData DmxTexture{};
 
@@ -63,8 +65,8 @@ export namespace Render {
 		} else {
 			glfwWindowHint(GLFW_VISIBLE, GLFW_TRUE);
 		}
-		glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-		glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+		glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
+		glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
 		glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 		app::SpoutWindow = glfwCreateWindow(ds.Width, ds.Height, "DMX Shader Renderer", nullptr, nullptr);
 		if (!app::SpoutWindow) {
@@ -85,7 +87,7 @@ export namespace Render {
 	void SetupDmxDataTexture() {
 		glGenTextures(1, &dmxDataTexture);
 		glBindTexture(GL_TEXTURE_1D, dmxDataTexture);
-		glTexImage1D(GL_TEXTURE_1D, 0, GL_R32F, DmxTexture.Channels, 0, GL_RED, GL_FLOAT, DmxTexture.ChannelsNormalized.data());
+		glTexImage1D(GL_TEXTURE_1D, 0, GL_R32F, DmxTexture.Channels, 0, GL_RED, GL_UNSIGNED_BYTE, DmxTexture.DmxData.data());
 		glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	}
 
@@ -126,26 +128,27 @@ export namespace Render {
 		GLuint texture
 	) {
 		if (!app::SpoutWindow) {
+			#ifdef _DEBUG
 			std::cerr << "Render: No SpoutWindow";
+			#endif
 			return;
 		}
 		glfwMakeContextCurrent(app::SpoutWindow);
 
 		SpoutSender sender;
 		if (!sender.CreateSender("DmxRasterizer",Render::DmxTexture.Width, Render::DmxTexture.Height)) {
+			#ifdef _DEBUG
 			std::cerr << "Failed to create Spout sender!";
+			#endif
 			return;
 		}
 
 		while (app::running) {
 			app::times.waitForRender();
-			for (auto&& [src, dst] : std::views::zip(DmxTexture.DmxData, DmxTexture.ChannelsNormalized)) {
-				dst = as<f32>(src) / 255.0f;
-			}
 			
-			// Update the DMX data into texture
+			// Update the DMX data into texture (OpenGL auto-normalizes u8 to [0.0, 1.0])
 			glBindTexture(GL_TEXTURE_1D, dmxDataTexture);
-			glTexSubImage1D(GL_TEXTURE_1D, 0, 0, DmxTexture.Channels, GL_RED, GL_FLOAT, DmxTexture.ChannelsNormalized.data());
+			glTexSubImage1D(GL_TEXTURE_1D, 0, 0, DmxTexture.Channels, GL_RED, GL_UNSIGNED_BYTE, DmxTexture.DmxData.data());
 
 			// Rendering
 			glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
