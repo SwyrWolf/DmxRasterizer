@@ -32,8 +32,7 @@ int main(int argc, char* argv[]) {
 	enum ArgType {VERSION, PORT, DEBUG, BINDIP, CH9, UNKNOWN };
 	std::unordered_map<std::string, ArgType> argMap = {
 		{"-d", DEBUG},
-		{"--debug", DEBUG},
-		{"--bind", BINDIP}
+		{"--debug", DEBUG}
 	};
 	
 	if (argc > 1) {
@@ -63,9 +62,6 @@ int main(int argc, char* argv[]) {
 		return -1;
 	}
 
-	std::cout << "Main Frag length: " << sizeof(Render::frag_src) << "\n";
-	std::cout << "Main Frag9 length: " << sizeof(Render::frag9_src) << "\n";
-
 	Render::SetupDmxDataTexture();
 	std::array<std::unique_ptr<Shader>, 2> shader {
 		Render::SetupShaderLoad(Render::vertex_src, Render::frag_src),
@@ -78,7 +74,7 @@ int main(int argc, char* argv[]) {
 	auto ipStr = app::ipString();
 	auto Addr = winsock::CreateAddress(ipStr, as<u16>(app::ipPort)).and_then(winsock::OpenNetworkSocket);
 	if (!Addr) {
-		std::cerr << Addr.error() << "\n";
+		std::cerr << "Err: 0x" << as<int>(Addr.error()) << "\n";
 		return -1;
 	}
 	app::NetConnection = std::move(*Addr);

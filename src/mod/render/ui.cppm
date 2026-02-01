@@ -81,7 +81,7 @@ export bool SetupWindow() {
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
 	if (!app::GuiWindow) {
-		GLFWwindow* uiWindow = glfwCreateWindow(735, 565, "DMX Rasterizer | v1.0.0", nullptr, nullptr);
+		GLFWwindow* uiWindow = glfwCreateWindow(730, 565, "DMX Rasterizer | v1.0.1", nullptr, nullptr);
 		if (!uiWindow) {
 			std::cerr << "SetupWindow Failed!\n";
 			return false;
@@ -132,7 +132,7 @@ export void ImGuiLoop(int& Channels) {
 		ImGui::SetNextWindowPos(ImVec2(Panels[0].x, Panels[0].y), ImGuiCond_Always);
 		ImGui::SetNextWindowSize(ImVec2(Panels[0].w, Panels[0].h), ImGuiCond_Always);
 		ImGui::Begin("DmxMainLog", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize);
-		ImGui::Text("DMX Rasterizer | v1.0.0");
+		ImGui::Text("DMX Rasterizer");
 		ImGui::Text("FPS: %.1f", ImGui::GetIO().Framerate);
 
 		std::string keys_pressed;
@@ -177,8 +177,8 @@ export void ImGuiLoop(int& Channels) {
 			if (winsock::winsockInit()) {
 				auto Addr = winsock::CreateAddress(app::ipString(), as<u16>(app::ipPort)).and_then(winsock::OpenNetworkSocket);
 				if (!Addr) {
-					std::cerr << Addr.error() << "\n";
-					return;
+					std::cerr << "Err: 0x" << as<int>(Addr.error()) << "\n";
+					break;
 				}
 				app::NetConnection.emplace(std::move(*Addr));
 				::ContinueNetThread();
@@ -190,7 +190,7 @@ export void ImGuiLoop(int& Channels) {
 		ImGui::SameLine();
 		if (ImGui::Button("Disconnect")) {
 			if (auto r = winsock::CloseNetworkSocket(app::NetConnection.value()); !r) {
-				std::cerr << "AHHHHHHHH IT BROKE!" << r.error() <<"\n";
+				std::cerr << "AHHHHHHHH IT BROKE! 0x" << as<int>(r.error()) <<"\n";
 			}
 			app::NetConnection.reset();
 		}

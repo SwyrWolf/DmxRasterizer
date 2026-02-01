@@ -18,3 +18,13 @@ for (auto&& [src, dst] : std::views::zip(DmxTexture.DmxData, DmxTexture.Channels
 	dst = as<f32>(src) / 255.0f;
 }
 ```
+
+Concatenate 4 u8's as a u32. (Endian agnostic)
+```cpp
+std::array<u8, 4> bytes{a, b, c, d};
+u32 result{0};
+for (auto byte : bytes) {
+	result = (result << 8) | byte;
+}
+return result;
+```
