@@ -38,12 +38,12 @@ export void NetworkThread( std::stop_token st, winsock::Endpoint& ep ) {
 
 			if (auto r = winsock::RecieveNetPacket(buffer, ep); !r) {
 				std::cerr << "Failed to recieve DMX data.\n";
-				break;
+				continue;
 			}
 			
 			if (auto r = artnet::ProcessDmxPacket(buffer, Render::DmxTexture.DmxData, 8); !r) {
 				std::cerr << "Failed to process DMX data." << as<int>(r.error()) << "\n";
-				break;
+				continue;
 			} else { 
 				app::times.MeasureTimeDelta(r.value());
 				app::times.signalRender();

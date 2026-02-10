@@ -2,7 +2,6 @@ module;
 
 #include <expected>
 #include <vector>
-#include <ranges>
 #include <string>
 
 #include "../../external/vendor/glad.h"

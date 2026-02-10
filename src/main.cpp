@@ -118,6 +118,9 @@ int main(int argc, char* argv[]) {
 	
 	glDeleteBuffers(1, &Render::VBO);
 	glfwTerminate();
-	WSACleanup();
-	return 0;
+	if (auto r = winsock::CloseNetworkSocket(app::NetConnection.value()); !r) {
+		std::cerr << "AHHHHHHHH IT BROKE! 0x" << as<int>(r.error()) <<"\n";
+	}
+	app::NetConnection.reset();
+	std::exit(0);
 }
