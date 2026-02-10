@@ -59,11 +59,12 @@ export namespace Render {
 		}
 		
 		glfwDefaultWindowHints();
-		if(!app::debugMode){
-			glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
-		} else {
-			glfwWindowHint(GLFW_VISIBLE, GLFW_TRUE);
-		}
+		// if(!app::debugMode){
+		// 	glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
+		// } else {
+			// 	glfwWindowHint(GLFW_VISIBLE, GLFW_TRUE);
+			// }
+		glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
 		glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
 		glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
 		glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
@@ -72,6 +73,11 @@ export namespace Render {
 			return std::unexpected("Failed to create GLFW window");
 		}
 		glfwMakeContextCurrent(app::SpoutWindow);
+		glfwSetWindowCloseCallback(app::SpoutWindow,
+    [](GLFWwindow* window) {
+			app::ViewTexture = false;
+			glfwHideWindow(window);
+    });
 		return {};
 	}
 
