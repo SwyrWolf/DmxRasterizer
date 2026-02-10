@@ -81,7 +81,7 @@ export bool SetupWindow() {
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
 	if (!app::GuiWindow) {
-		GLFWwindow* uiWindow = glfwCreateWindow(730, 565, "DMX Rasterizer | v1.0.1", nullptr, nullptr);
+		GLFWwindow* uiWindow = glfwCreateWindow(730, 565, "DMX Rasterizer | v1.0.2", nullptr, nullptr);
 		if (!uiWindow) {
 			std::cerr << "SetupWindow Failed!\n";
 			return false;
@@ -210,6 +210,16 @@ export void ImGuiLoop(int& Channels) {
 			&app::RGBmode
 		)) {
 			Channels = app::RGBmode ? 4680 : 1560;
+		}
+		if (ImGui::Checkbox(
+			fmt::cat("View DMX Texture: ", app::ViewTexture ? "Enabled" : "Disabled").c_str(),
+			&app::ViewTexture
+		)) {
+			if (app::ViewTexture) {
+				glfwShowWindow(app::SpoutWindow);
+			} else {
+				glfwHideWindow(app::SpoutWindow);
+			}
 		}
 
 		for (int i : std::views::iota(0, 9)) {

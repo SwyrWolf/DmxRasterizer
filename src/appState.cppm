@@ -22,6 +22,7 @@ export namespace app {
 
 	bool debugMode{false};
 	bool RGBmode{false};
+	bool ViewTexture{false};
 	bool Unicast{false};
 	bool VsyncEnabled{true};
 

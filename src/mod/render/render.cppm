@@ -166,7 +166,7 @@ export namespace Render {
 			glDrawArrays(GL_TRIANGLES, 0, 6);
 			sender.SendTexture(texture, GL_TEXTURE_2D, DmxTexture.Width, DmxTexture.Height);
 			
-			if (app::debugMode) {
+			if (app::ViewTexture) {
 				glBindFramebuffer(GL_READ_FRAMEBUFFER, framebuffer);
 				glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
 
