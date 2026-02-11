@@ -1,9 +1,8 @@
 param (
 	[string]$pMode
 )
-Write-Host "Build script!"
 
-$programEXE = "DmxRasterizer.exe"
+$programEXE = "dmxrasterizer.exe"
 $exePath = Join-Path -Path "./build" -ChildPath $programEXE
 
 switch ($pMode) {
@@ -19,36 +18,19 @@ switch ($pMode) {
 		ninja -C build
 		return
 	}
-	"--run" {
+	"--rundb" {
 		Write-Host "Running Program"
 		lldb $exePath
 		return
 	}
-	default {
-		if ($pMode -match '1') {
-			Write-Host "Generating debug Build with clang Setup!"
-			cmake -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -G Ninja -B ./build -DCMAKE_BUILD_TYPE=Debug
-		}
-		if ($pMode -match 'g') {
-			Write-Host "Generating debug Build!"
-			cmake -G Ninja -B ./build
-		}
-		if ($pMode -match 'b') {
-			Write-Host "Building!"
-			ninja -C build
-		}
-		if ($pMode -match 'r') {
-			Write-Host "Launching!"
-			& $exePath
-		}
-		if ($pMode -notmatch '[gbr1]') {
-			ninja -C build
-			& $exePath
-		}
+	"--run" {
+		Write-Host "Running Program"
+		& $exePath
+		return
 	}
-}
-
-if ($pMode2 -match 'r') {
-	Write-Host "Launching!"
-	& $exePath
+	"--setup" {
+		Write-Host "Generating debug Build with clang Setup!"
+		cmake -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -G Ninja -B ./build -DCMAKE_BUILD_TYPE=Debug
+		return
+	}
 }
