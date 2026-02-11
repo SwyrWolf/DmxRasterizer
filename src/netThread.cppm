@@ -37,6 +37,7 @@ export void NetworkThread( std::stop_token st, winsock::Endpoint& ep ) {
 		while (!st.stop_requested()) {
 
 			if (auto r = winsock::RecieveNetPacket(buffer, ep); !r) {
+				if (r.error() == winsock::Err::recieve_SocketClosed) break;
 				std::cerr << "Failed to recieve DMX data.\n";
 				continue;
 			}

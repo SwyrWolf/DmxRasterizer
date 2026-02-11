@@ -42,6 +42,7 @@ export namespace winsock {
 		socket_NoOpenSocket,
 
 		recieve_Failure,
+		recieve_SocketClosed,
 	};
 
 	constexpr auto hostEndian(u32&& val) -> u32 {
@@ -183,8 +184,10 @@ export namespace winsock {
 	auto RecieveNetPacket(std::span<u8> dst, Endpoint& ep) -> std::expected<void, Err> {
 		
 		int SenderAddrSize = sizeof(ep.SenderAddr);
-		int errCode = recvfrom(ep.Socket, raw<char*>(dst.data()), dst.size(), 0, raw<sockaddr*>(&ep.SenderAddr), &SenderAddrSize);
-		if (errCode == SOCKET_ERROR) {
+		int statusCode = recvfrom(ep.Socket, raw<char*>(dst.data()), dst.size(), 0, raw<sockaddr*>(&ep.SenderAddr), &SenderAddrSize);
+		if (statusCode == SOCKET_ERROR) {
+			int err = WSAGetLastError();
+			if (err == WSAEINTR) return std::unexpected(Err::recieve_SocketClosed);
 			return std::unexpected(Err::recieve_Failure);
 		}
 

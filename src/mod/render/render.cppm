@@ -59,11 +59,6 @@ export namespace Render {
 		}
 		
 		glfwDefaultWindowHints();
-		// if(!app::debugMode){
-		// 	glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
-		// } else {
-			// 	glfwWindowHint(GLFW_VISIBLE, GLFW_TRUE);
-			// }
 		glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
 		glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
 		glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
