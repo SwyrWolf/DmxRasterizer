@@ -31,7 +31,6 @@ export struct Shader {
 	auto compileFromSrc(std::string_view source, GLenum type) -> u32 {
 		const char* src = source.data();
 		const GLint len = static_cast<GLint>(source.size());
-		std::cerr << "length is: " << len << "\n";
 
 		u32 shader = glCreateShader(type);
 		glShaderSource(shader, 1, &src, &len);
