@@ -38,13 +38,13 @@ set(MODULE_FILES
 	src/external/werelib/weretype.cppm
 	src/external/werelib/fmt.cppm
 
-	src/shader.cppm
 	src/appState.cppm
 	src/netThread.cppm
-
+	
 	src/mod/net/artnet.cppm
 	src/mod/net/winsock.cppm
 	
+	src/mod/render/shader.cppm
 	src/mod/render/render.cppm
 	src/mod/render/ui.cppm
 	

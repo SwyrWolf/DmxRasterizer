@@ -1,12 +1,9 @@
 module;
 
-#include <filesystem>
 #include <iostream>
-#include <string>
-#include <fstream>
-#include <sstream>
+#include <string_view>
 
-#include "./external/vendor/glad.h"
+#include "glad.h"
 
 export module shader;
 import weretype;
