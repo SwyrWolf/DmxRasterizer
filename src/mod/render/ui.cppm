@@ -8,6 +8,7 @@ module;
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
 #include <glfw3.h>
+#include "wereMacro.hpp"
 
 export module render.ui;
 import appState;
@@ -19,10 +20,10 @@ import netThread;
 
 // Embed raw RGBA8 bytes (W*H*4 bytes)
 constexpr u8 Icon32[] = {
-	#embed "../../../resource/dmxr32.rgba"
+	#embed EMBED(resource/dmxr32.rgba)
 };
 constexpr u8 Icon16[] = {
-	#embed "../../../resource/dmxr16.rgba"
+	#embed EMBED(resource/dmxr16.rgba)
 };
 constexpr GLFWimage imgs[2]{
 	{ 16, 16, const_cast<u8*>(Icon16)},
