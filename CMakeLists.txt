@@ -35,8 +35,8 @@ set_source_files_properties(${SOURCE_FILES} PROPERTIES
 )
 
 set(MODULE_FILES
-	src/external/werelib/weretype.cppm
-	src/external/werelib/fmt.cppm
+	src/vendor/werelib/weretype.cppm
+	src/vendor/werelib/fmt.cppm
 
 	src/appState.cppm
 	src/netThread.cppm
@@ -55,21 +55,25 @@ set_source_files_properties(${MODULE_FILES} PROPERTIES
 )
 
 set(IMGUI_SRC
-	src/external/vendor/imgui/imgui.cpp
-	src/external/vendor/imgui/imgui_draw.cpp
-	src/external/vendor/imgui/imgui_tables.cpp
-	src/external/vendor/imgui/imgui_widgets.cpp
-	src/external/vendor/imgui/backends/imgui_impl_glfw.cpp
-	src/external/vendor/imgui/backends/imgui_impl_opengl3.cpp
+	src/vendor/imgui/imgui.cpp
+	src/vendor/imgui/imgui_draw.cpp
+	src/vendor/imgui/imgui_tables.cpp
+	src/vendor/imgui/imgui_widgets.cpp
+	src/vendor/imgui/backends/imgui_impl_glfw.cpp
+	src/vendor/imgui/backends/imgui_impl_opengl3.cpp
 )
 add_library(imgui STATIC ${IMGUI_SRC})
-target_include_directories(imgui PUBLIC src/external/vendor/imGui src/external/vendor/imGui/backends)
+target_include_directories(imgui PUBLIC src/vendor/imGui src/vendor/imGui/backends)
 target_link_libraries(imgui PUBLIC glfw)
 
-add_library(glad STATIC src/external/vendor/glad.c)
-target_include_directories(glad PUBLIC src/external/vendor)
+add_library(glad STATIC src/vendor/glad/glad.c)
+target_include_directories(glad PUBLIC src/vendor/glad/)
 
 add_executable(${PROJECT_NAME} ${SOURCE_FILES} ${APP_ICO})
+target_include_directories(${PROJECT_NAME} PRIVATE src/include)
+target_compile_definitions(${PROJECT_NAME} PRIVATE
+	EMBED_ROOT=${CMAKE_CURRENT_SOURCE_DIR}/src/embed
+)
 
 target_sources(${PROJECT_NAME} PRIVATE
 	FILE_SET cxx_modules TYPE CXX_MODULES FILES
@@ -80,6 +84,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE
 	${glfw_SOURCE_DIR}/include/GLFW
 	${spout2_SOURCE_DIR}/SPOUTSDK
 )
+
 
 target_link_libraries(
 	${PROJECT_NAME} PRIVATE

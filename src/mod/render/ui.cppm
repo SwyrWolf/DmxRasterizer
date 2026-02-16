@@ -3,10 +3,10 @@ module;
 #include <iostream>
 #include <ranges>
 
-#include "../../external/vendor/glad.h"
-#include "../../external/vendor/imGui/imgui.h"
-#include "../../external/vendor/imGui/backends/imgui_impl_glfw.h"
-#include "../../external/vendor/imGui/backends/imgui_impl_opengl3.h"
+#include "glad.h"
+#include "imgui.h"
+#include "imgui_impl_glfw.h"
+#include "imgui_impl_opengl3.h"
 #include <glfw3.h>
 
 export module render.ui;

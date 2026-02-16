@@ -10,12 +10,12 @@
 #include <format>
 #include <string>
 
-#include "./external/vendor/glad.h"
+#include "glad.h"
 #include <glfw3.h>
 #include <SpoutGL/SpoutSender.h>
-#include "../../external/vendor/imGui/imgui.h"
-#include "../../external/vendor/imGui/backends/imgui_impl_glfw.h"
-#include "../../external/vendor/imGui/backends/imgui_impl_opengl3.h"
+#include "imgui.h"
+#include "imgui_impl_glfw.h"
+#include "imgui_impl_opengl3.h"
 
 import weretype;
 import fmtwrap;

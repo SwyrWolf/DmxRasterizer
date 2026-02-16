@@ -4,9 +4,10 @@ module;
 #include <vector>
 #include <string>
 
-#include "../../external/vendor/glad.h"
+#include "glad.h"
 #include <glfw3.h>
 #include <SpoutGL/SpoutSender.h>
+#include "wereMacro.hpp"
 
 export module render;
 import weretype;
@@ -16,17 +17,17 @@ import appState;
 export namespace Render {
 
 	constexpr char vertex_src_data[] = {
-		#embed "../../../shaders/vertex.glsl"
+		#embed EMBED(shader/vertex.glsl)
 	};
 	constexpr std::string_view vertex_src{vertex_src_data, std::size(vertex_src_data)};
 	
 	constexpr char frag_src_data[] = {
-		#embed "../../../shaders/frag.glsl"
+		#embed EMBED(shader/frag.glsl)
 	};
 	constexpr std::string_view frag_src{frag_src_data, std::size(frag_src_data)};
 	
 	constexpr char frag9_src_data[] = {
-		#embed "../../../shaders/frag9.glsl"
+		#embed EMBED(shader/frag9.glsl)
 	};
 	constexpr std::string_view frag9_src{frag9_src_data, std::size(frag9_src_data)};
 
