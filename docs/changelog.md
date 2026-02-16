@@ -3,6 +3,7 @@ New Feature:
 Added toggle for viewing DMX Texture
 Fix:
 DMXRasterizer sometimes not closing & becoming a background process
+Minor miscellaneous improvements
 
 ## Version 1.0.1
 New Feature:
