@@ -8,7 +8,9 @@ module;
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
 #include <glfw3.h>
+
 #include "wereMacro.hpp"
+#include "buildstamp.hpp"
 
 export module render.ui;
 import appState;
@@ -72,6 +74,8 @@ constexpr std::array Panels{
 	} // Panel 3 -- span bottom
 };
 
+constexpr const char* Title = "DMX Rasterizer | " APP_BUILD_VERSION;
+
 export bool SetupWindow() {
 	glfwDefaultWindowHints();
 	glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
@@ -82,7 +86,7 @@ export bool SetupWindow() {
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
 	if (!app::GuiWindow) {
-		GLFWwindow* uiWindow = glfwCreateWindow(730, 565, "DMX Rasterizer | v1.0.2", nullptr, nullptr);
+		GLFWwindow* uiWindow = glfwCreateWindow(730, 565, Title, nullptr, nullptr);
 		if (!uiWindow) {
 			std::cerr << "SetupWindow Failed!\n";
 			return false;
