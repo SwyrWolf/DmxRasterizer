@@ -41,14 +41,14 @@ set(MODULE_FILES
 	src/appState.cppm
 	src/netThread.cppm
 	
-	src/mod/net/artnet.cppm
-	src/mod/net/winsock.cppm
+	src/core/net/artnet.cppm
+	src/core/net/winsock.cppm
 	
-	src/mod/render/shader.cppm
-	src/mod/render/render.cppm
-	src/mod/render/ui.cppm
+	src/core/render/shader.cppm
+	src/core/render/render.cppm
+	src/core/render/ui.cppm
 	
-	src/mod/applog.cppm
+	src/core/applog.cppm
 )
 set_source_files_properties(${MODULE_FILES} PROPERTIES
 	COMPILE_OPTIONS "-fno-exceptions"
