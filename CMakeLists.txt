@@ -49,6 +49,7 @@ set(MODULE_FILES
 	src/core/render/ui.cppm
 	
 	src/core/applog.cppm
+	src/core/console.cppm
 )
 set_source_files_properties(${MODULE_FILES} PROPERTIES
 	COMPILE_OPTIONS "-fno-exceptions"
@@ -85,7 +86,6 @@ target_include_directories(${PROJECT_NAME} PRIVATE
 	${spout2_SOURCE_DIR}/SPOUTSDK
 )
 
-
 target_link_libraries(
 	${PROJECT_NAME} PRIVATE
 	opengl32.lib
@@ -99,10 +99,10 @@ target_link_libraries(
 
 # Hide console only in Release
 set_target_properties(${PROJECT_NAME} PROPERTIES
-  WIN32_EXECUTABLE $<CONFIG:Release>
+	WIN32_EXECUTABLE $<CONFIG:Release>
 )
 
 # In Release, use main() as entrypoint even under GUI subsystem
 target_link_options(${PROJECT_NAME} PRIVATE
-  $<$<CONFIG:Release>:-Wl,/ENTRY:mainCRTStartup>
+	$<$<CONFIG:Release>:-Wl,/ENTRY:mainCRTStartup>
 )

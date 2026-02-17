@@ -1,3 +1,7 @@
+## Version 1.0.3
+New Feature:
+Added toggle for viewing debug console
+
 ## Version 1.0.2
 New Feature:
 Added toggle for viewing DMX Texture

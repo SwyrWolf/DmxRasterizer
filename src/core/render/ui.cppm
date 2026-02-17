@@ -19,6 +19,7 @@ import net.artnet;
 import net.winsock;
 import fmtwrap;
 import netThread;
+import console;
 
 // Embed raw RGBA8 bytes (W*H*4 bytes)
 constexpr u8 Icon32[] = {
@@ -219,12 +220,19 @@ export void ImGuiLoop(int& Channels) {
 		if (ImGui::Checkbox(
 			fmt::cat("View DMX Texture: ", app::ViewTexture ? "Enabled" : "Disabled").c_str(),
 			&app::ViewTexture
-		)) {
-			if (app::ViewTexture) {
-				glfwShowWindow(app::SpoutWindow);
-			} else {
-				glfwHideWindow(app::SpoutWindow);
-			}
+		)) { 
+			app::ViewTexture ? glfwShowWindow(app::SpoutWindow) : glfwHideWindow(app::SpoutWindow);
+			// if (app::ViewTexture) {
+			// 	glfwShowWindow(app::SpoutWindow);
+			// } else {
+			// 	glfwHideWindow(app::SpoutWindow);
+			// }
+		}
+		if (ImGui::Checkbox(
+			fmt::cat("Show Console: ", app::ViewConsole ? "Enabled" : "Disabled").c_str(),
+			&app::ViewConsole
+		)) { 
+			console::ConsoleToggle();
 		}
 
 		for (int i : std::views::iota(0, 9)) {
