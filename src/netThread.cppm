@@ -3,7 +3,7 @@ module;
 #include <iostream>
 #include <array>
 #include <expected>
-#include <stop_token> // used for stop token
+#include <stop_token>
 #include <atomic>
 #include <format>
 
