@@ -28,8 +28,8 @@ export namespace applog {
 		}
 
 		auto GetTimeDeltasMs() {
-			 return m_TimeDelta
-				| std::views::transform([](const auto& i) { return i.count() * 1000; });
+			return m_TimeDelta
+			| std::views::transform([](const auto& i) { return i.count() * 1000; });
 		}
 
 		const f64 GetTimeDeltaMsAt(std::size_t i) {

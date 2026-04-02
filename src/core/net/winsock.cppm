@@ -181,7 +181,8 @@ export namespace winsock {
 		return {};
 	}
 
-	auto RecieveNetPacket(std::span<u8> dst, Endpoint& ep) -> std::expected<void, Err> {
+	auto RecieveNetPacket(std::span<u8> dst, Endpoint& ep) 
+	-> std::expected<void, Err> {
 		
 		int SenderAddrSize = sizeof(ep.SenderAddr);
 		int statusCode = recvfrom(ep.Socket, raw<char*>(dst.data()), dst.size(), 0, raw<sockaddr*>(&ep.SenderAddr), &SenderAddrSize);
