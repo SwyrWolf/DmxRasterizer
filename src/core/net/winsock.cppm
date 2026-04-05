@@ -43,6 +43,7 @@ export namespace winsock {
 
 		recieve_Failure,
 		recieve_SocketClosed,
+		recieve_PacketTooLarge,
 	};
 
 	constexpr auto hostEndian(u32&& val) -> u32 {
@@ -181,17 +182,20 @@ export namespace winsock {
 		return {};
 	}
 
+	// If no error occurs, recvfrom returns the number of bytes received. 
+	// If the connection has been gracefully closed, the return value is zero. Otherwise, a value of SOCKET_ERROR
 	auto RecieveNetPacket(std::span<u8> dst, Endpoint& ep) 
-	-> std::expected<void, Err> {
-		
+	-> std::expected<int, Err> {
+
 		int SenderAddrSize = sizeof(ep.SenderAddr);
-		int statusCode = recvfrom(ep.Socket, raw<char*>(dst.data()), dst.size(), 0, raw<sockaddr*>(&ep.SenderAddr), &SenderAddrSize);
-		if (statusCode == SOCKET_ERROR) {
+		int bytes = recvfrom(ep.Socket, raw<char*>(dst.data()), dst.size(), 0, raw<sockaddr*>(&ep.SenderAddr), &SenderAddrSize);
+		if (bytes == SOCKET_ERROR) {
 			int err = WSAGetLastError();
-			if (err == WSAEINTR) return std::unexpected(Err::recieve_SocketClosed);
+			if (err == WSAEINTR)    return std::unexpected(Err::recieve_SocketClosed);
+			if (err == WSAEMSGSIZE) return std::unexpected(Err::recieve_PacketTooLarge);
 			return std::unexpected(Err::recieve_Failure);
 		}
 
-		return {};
+		return bytes;
 	}
 }
