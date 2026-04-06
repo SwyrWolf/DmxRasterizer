@@ -1,7 +1,6 @@
 module;
 
 #include <expected>
-#include <optional>
 #include <string>
 #include <span>
 #include <charconv>
@@ -17,8 +16,8 @@ import fmtwrap;
 
 export namespace winsock {
 
-	constexpr u32 localhost = INADDR_LOOPBACK;
-	constexpr u16 artnetport = 6454;
+	constexpr u32 LOCALHOST = INADDR_LOOPBACK;
+	constexpr u16 ARTNETPORT = 6454;
 
 	enum class Err {
 		WSA_StartupFailure,
@@ -67,8 +66,8 @@ export namespace winsock {
 
 	////////////////////////////////////////
 	struct Endpoint {
-		u32 ip{localhost};
-		u16 port{artnetport};
+		u32 ip{LOCALHOST};
+		u16 port{ARTNETPORT};
 		SOCKET Socket{INVALID_SOCKET};
 		sockaddr_in ListenAddr{};
 		sockaddr_in SenderAddr{};
@@ -90,7 +89,7 @@ export namespace winsock {
 
 	// Validate_ipAddr("127.0.0.1") to verify ipv4 address and return as u32
 	auto validate_ipAddr(std::string_view Str) -> std::expected<u32, Err> {
-		if (Str == "localhost") return Eval_ipv4(127, 0, 0, 1);
+		if (Str == "LOCALHOST") return Eval_ipv4(127, 0, 0, 1);
 		if (Str == "any")       return as<u32>(0);
 
 		std::array<u8, 4> octets{};
@@ -109,7 +108,7 @@ export namespace winsock {
 			if (ec != std::errc{} || ptr != sv.data() + sv.size()) return std::unexpected(Err::ipv4_InvalidOctetValue);
 			if (val > 255) return std::unexpected(Err::ipv4_InvalidOctetRange);
 
-			octets[idx++] = static_cast<u8>(val);
+			octets[idx++] = as<u8>(val);
 		}
 
 		if (idx != 4) return std::unexpected(Err::ipv4_TooLittleOctets);
@@ -153,7 +152,7 @@ export namespace winsock {
 			return std::unexpected(Err::socket_OpenFailure);
 		}
 		
-		int enable = 1;
+		int enable{1};
 		if (setsockopt(ep.Socket, SOL_SOCKET, SO_REUSEADDR, (const char*)&enable, sizeof(enable)) < 0) {
 			const int wsa = WSAGetLastError();
 			return std::unexpected(Err::socket_OptionsFailure);

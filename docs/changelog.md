@@ -1,6 +1,7 @@
 ## Version 1.0.3
 New Feature:
 Added toggle for viewing debug console
+Added window scaling to DMX Texture view.
 
 ## Version 1.0.2
 New Feature:

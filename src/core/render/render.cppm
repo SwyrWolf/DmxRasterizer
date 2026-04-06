@@ -169,12 +169,15 @@ export namespace Render {
 			sender.SendTexture(texture, GL_TEXTURE_2D, DmxTexture.Width, DmxTexture.Height);
 			
 			if (app::ViewTexture) {
+				int fbW{}, fbH{};
+				glfwGetFramebufferSize(app::SpoutWindow, &fbW, &fbH);
+
 				glBindFramebuffer(GL_READ_FRAMEBUFFER, framebuffer);
 				glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
 
 				glBlitFramebuffer(
 					0, 0, DmxTexture.Width, DmxTexture.Height,
-					0, 0, DmxTexture.Width, DmxTexture.Height,
+					0, 0, fbW, fbH,
 					GL_COLOR_BUFFER_BIT, GL_NEAREST
 				);
 				
