@@ -40,8 +40,6 @@ export void NetworkThread( std::stop_token st, winsock::Endpoint& ep ) {
 				if (r.error() == winsock::Err::recieve_SocketClosed) break;
 				std::println(stderr, "Failed to recieve DMX data.");
 				continue;
-			} else {
-				std::println(stderr, "dmxLength: {:d}", r.value());
 			}
 			
 			if (auto r = artnet::ProcessDmxPacket(buffer, Render::DmxTexture.DmxData, 8); !r) {

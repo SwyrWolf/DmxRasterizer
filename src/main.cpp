@@ -2,13 +2,13 @@
 #include <windows.h>
 #include <ws2tcpip.h>
 
-#include <iostream>
 #include <unordered_map>
 #include <thread>
 #include <expected>
 #include <optional>
 #include <format>
 #include <string>
+#include <print>
 
 #include "glad.h"
 #include <glfw3.h>
@@ -49,7 +49,7 @@ int main(int argc, char* argv[]) {
 				
 				case UNKNOWN:
 				default:
-				std::cerr << "Unkown argument: " << arg << std::endl;
+				std::println("Unkown argument: {}", arg);
 				break;
 			}
 		}
@@ -58,7 +58,7 @@ int main(int argc, char* argv[]) {
 	auto init = Render::InitGLFW(Render::DmxTexture)
 		.and_then(Render::InitGLAD);
 	if (!init) {
-		std::cerr << init.error() << "\n";
+		std::println(stderr, "InitGLFW Failed: {}", init.error());
 		return -1;
 	}
 
@@ -74,13 +74,13 @@ int main(int argc, char* argv[]) {
 	auto ipStr = app::ipString();
 	auto Addr = winsock::CreateAddress(ipStr, as<u16>(app::ipPort)).and_then(winsock::OpenNetworkSocket);
 	if (!Addr) {
-		std::cerr << "Err: 0x" << as<int>(Addr.error()) << "\n";
+		std::println(stderr, "Err: 0x{:x}", as<int>(Addr.error()));
 		return -1;
 	}
 	app::NetConnection = std::move(*Addr);
 	#ifdef _DEBUG
-	std::cerr << "IP Address: 0x" << std::hex << app::NetConnection->ip << "\n";
-	std::cerr << "IP Port: 0x" << std::hex << app::NetConnection->port << "\n";
+	std::println(stderr, "IP Address: 0x{:x}", app::NetConnection->ip);
+	std::println(stderr, "IP Port: 0x{:x}", app::NetConnection->port);
 	#endif
 	app::Debug = std::format(L"Listening for Art-Net on [{}:{}]", std::wstring(ipStr.begin(), ipStr.end()), app::NetConnection->port);
 	
@@ -99,7 +99,7 @@ int main(int argc, char* argv[]) {
 
 	// Creation of the Gui Window required on main thread to prevent nullptr race condition
 	if (!SetupWindow()) {
-		std::cerr << "FAILED\n";
+		std::println("SetupWindow Failed");
 		return -1;
 	}
 	
@@ -119,7 +119,7 @@ int main(int argc, char* argv[]) {
 	glDeleteBuffers(1, &Render::VBO);
 	glfwTerminate();
 	if (auto r = winsock::CloseNetworkSocket(app::NetConnection.value()); !r) {
-		std::cerr << "AHHHHHHHH IT BROKE! 0x" << as<int>(r.error()) <<"\n";
+		std::println("Winsock CloseNetworkSocket Failed: 0x{:x}", as<int>(r.error()));
 	}
 	app::NetConnection.reset();
 	std::exit(0);
