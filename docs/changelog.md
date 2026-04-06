@@ -2,6 +2,8 @@
 New Feature:
 Added toggle for viewing debug console
 Added window scaling to DMX Texture view.
+Cleanup:
+Removed all launch options, replaced by GUI.
 
 ## Version 1.0.2
 New Feature:

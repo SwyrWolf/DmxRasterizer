@@ -27,33 +27,7 @@ import render.ui;
 import net.artnet;
 import net.winsock;
 
-int main(int argc, char* argv[]) {
-
-	enum ArgType {VERSION, PORT, DEBUG, BINDIP, CH9, UNKNOWN };
-	std::unordered_map<std::string, ArgType> argMap = {
-		{"-d", DEBUG},
-		{"--debug", DEBUG}
-	};
-	
-	if (argc > 1) {
-		for (int i = 1; i < argc; ++i) {
-			std::string arg = argv[i];
-			
-			auto theArg = argMap.find(arg);
-			ArgType argType = (theArg != argMap.end()) ? theArg->second : UNKNOWN;
-			
-			switch (argType) {			
-				case DEBUG:
-				app::debugMode = true;
-				break;
-				
-				case UNKNOWN:
-				default:
-				std::println("Unkown argument: {}", arg);
-				break;
-			}
-		}
-	}
+int main() {
 
 	auto init = Render::InitGLFW(Render::DmxTexture)
 		.and_then(Render::InitGLAD);

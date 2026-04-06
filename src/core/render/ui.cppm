@@ -1,7 +1,7 @@
 module;
 
-#include <iostream>
 #include <ranges>
+#include <print>
 
 #include "glad.h"
 #include "imgui.h"
@@ -89,7 +89,7 @@ export bool SetupWindow() {
 	if (!app::GuiWindow) {
 		GLFWwindow* uiWindow = glfwCreateWindow(730, 565, Title, nullptr, nullptr);
 		if (!uiWindow) {
-			std::cerr << "SetupWindow Failed!\n";
+			std::println(stderr, "Setup Window Failed!");
 			return false;
 		}
 
@@ -162,7 +162,7 @@ export void ImGuiLoop(int& Channels) {
 		ImGui::SetNextItemWidth(150.0f);
 		ImGui::BeginDisabled(app::VsyncEnabled);
 		if (ImGui::Combo("##FPS Limit", &app::FrameRateSel, app::FPS_LABELS.data(), as<int>(app::FPS_ITEMS.size()))) {
-			std::wcerr << L"\nfps selected";
+			std::println("fps selected");
 		}
 		ImGui::EndDisabled();
 		
@@ -183,7 +183,7 @@ export void ImGuiLoop(int& Channels) {
 			if (winsock::winsockInit()) {
 				auto Addr = winsock::CreateAddress(app::ipString(), as<u16>(app::ipPort)).and_then(winsock::OpenNetworkSocket);
 				if (!Addr) {
-					std::cerr << "Err: 0x" << as<int>(Addr.error()) << "\n";
+					std::println(stderr, "Err: 0x{:x}", as<int>(Addr.error()));
 					break;
 				}
 				app::NetConnection.emplace(std::move(*Addr));
@@ -196,7 +196,7 @@ export void ImGuiLoop(int& Channels) {
 		ImGui::SameLine();
 		if (ImGui::Button("Disconnect")) {
 			if (auto r = winsock::CloseNetworkSocket(app::NetConnection.value()); !r) {
-				std::cerr << "AHHHHHHHH IT BROKE! 0x" << as<int>(r.error()) <<"\n";
+				std::println(stderr, "Error closing network socket: 0x{:x}", as<int>(r.error()));
 			}
 			app::NetConnection.reset();
 		}
@@ -222,11 +222,6 @@ export void ImGuiLoop(int& Channels) {
 			&app::ViewTexture
 		)) { 
 			app::ViewTexture ? glfwShowWindow(app::SpoutWindow) : glfwHideWindow(app::SpoutWindow);
-			// if (app::ViewTexture) {
-			// 	glfwShowWindow(app::SpoutWindow);
-			// } else {
-			// 	glfwHideWindow(app::SpoutWindow);
-			// }
 		}
 		if (ImGui::Checkbox(
 			fmt::cat("Show Console: ", app::ViewConsole ? "Enabled" : "Disabled").c_str(),
@@ -262,7 +257,7 @@ export void ImGuiLoop(int& Channels) {
 		glfwSwapBuffers(app::GuiWindow);
 	}
 
-	std::cerr << "ImGui Ended!\n"; 
+	std::println("ImGui Ended!");
 	
 	glfwMakeContextCurrent(nullptr);
 	ImGui_ImplOpenGL3_Shutdown();
