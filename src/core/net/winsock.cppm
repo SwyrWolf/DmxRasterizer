@@ -6,6 +6,7 @@ module;
 #include <charconv>
 #include <ranges>
 #include <bit>
+#include <cstring>
 
 #include <winsock2.h>
 #include <ws2tcpip.h>
@@ -43,6 +44,9 @@ export namespace winsock {
 		recieve_Failure,
 		recieve_SocketClosed,
 		recieve_PacketTooLarge,
+
+		connect_HostResolveFail,
+		connect_Failure,
 	};
 
 	constexpr auto hostEndian(u32&& val) -> u32 {
@@ -196,5 +200,78 @@ export namespace winsock {
 		}
 
 		return bytes;
+	}
+
+	// Connect a TCP socket to host:port, resolving hostnames via DNS
+	auto ConnectTCP(std::string_view host, u16 port) -> std::expected<Endpoint, Err> {
+		if (auto r = winsockInit(); !r) return std::unexpected(r.error());
+
+		auto portStr = std::to_string(port);
+		std::string hostStr{host};
+
+		addrinfo hints{};
+		hints.ai_family   = AF_INET;
+		hints.ai_socktype = SOCK_STREAM;
+		hints.ai_protocol = IPPROTO_TCP;
+
+		addrinfo* res = nullptr;
+		if (getaddrinfo(hostStr.c_str(), portStr.c_str(), &hints, &res) != 0)
+			return std::unexpected(Err::connect_HostResolveFail);
+
+		SOCKET sock = WSASocketW(AF_INET, SOCK_STREAM, IPPROTO_TCP, nullptr, 0, WSA_FLAG_OVERLAPPED);
+		if (sock == INVALID_SOCKET) { freeaddrinfo(res); return std::unexpected(Err::socket_OpenFailure); }
+
+		if (::connect(sock, res->ai_addr, static_cast<int>(res->ai_addrlen)) == SOCKET_ERROR) {
+			closesocket(sock);
+			freeaddrinfo(res);
+			return std::unexpected(Err::connect_Failure);
+		}
+
+		Endpoint ep{};
+		ep.Socket = sock;
+		ep.port   = port;
+		std::memcpy(&ep.SenderAddr, res->ai_addr, res->ai_addrlen);
+		ep.ip = ntohl(ep.SenderAddr.sin_addr.s_addr);
+		freeaddrinfo(res);
+		return ep;
+	}
+
+	// Create an unbound UDP socket with the server address stored in SenderAddr
+	auto CreateUDPSocket(std::string_view host, u16 port) -> std::expected<Endpoint, Err> {
+		if (auto r = winsockInit(); !r) return std::unexpected(r.error());
+
+		auto portStr = std::to_string(port);
+		std::string hostStr{host};
+
+		addrinfo hints{};
+		hints.ai_family   = AF_INET;
+		hints.ai_socktype = SOCK_DGRAM;
+		hints.ai_protocol = IPPROTO_UDP;
+
+		addrinfo* res = nullptr;
+		if (getaddrinfo(hostStr.c_str(), portStr.c_str(), &hints, &res) != 0)
+			return std::unexpected(Err::connect_HostResolveFail);
+
+		SOCKET sock = WSASocketW(AF_INET, SOCK_DGRAM, IPPROTO_UDP, nullptr, 0, WSA_FLAG_OVERLAPPED);
+		if (sock == INVALID_SOCKET) { freeaddrinfo(res); return std::unexpected(Err::socket_OpenFailure); }
+
+		// Bind to 0.0.0.0:0 so the OS assigns a local port and recvfrom works
+		sockaddr_in local{};
+		local.sin_family      = AF_INET;
+		local.sin_addr.s_addr = INADDR_ANY;
+		local.sin_port        = 0;
+		if (bind(sock, raw<sockaddr*>(&local), sizeof(local)) == SOCKET_ERROR) {
+			closesocket(sock);
+			freeaddrinfo(res);
+			return std::unexpected(Err::socket_BindingFailure);
+		}
+
+		Endpoint ep{};
+		ep.Socket = sock;
+		ep.port   = port;
+		std::memcpy(&ep.SenderAddr, res->ai_addr, res->ai_addrlen);
+		ep.ip = ntohl(ep.SenderAddr.sin_addr.s_addr);
+		freeaddrinfo(res);
+		return ep;
 	}
 }

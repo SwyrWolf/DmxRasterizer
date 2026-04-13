@@ -24,10 +24,24 @@ export namespace app {
 	bool RGBmode{false};
 	bool ViewTexture{false};
 	bool ViewConsole{false};
-	bool Unicast{false};
 	bool VsyncEnabled{true};
+	bool Unicast{false};
+	bool RelaySend{false};
+
+	std::array<char, 64> relayAddress  = {""};
+	std::array<char, 64> displayName   = {""};
+	std::array<char, 64> relayAccess   = {""};
+
+	std::string relayStatus = "Not connected";
+	u32   relaySessionID{};
+	std::array<u8, 32> relayToken{};
+
+	enum class RelayMode { Send = 0, Listen = 1 };
+	RelayMode relayMode{ RelayMode::Send };
 
 	std::optional<winsock::Endpoint> NetConnection;
+	std::optional<winsock::Endpoint> RelayTCP;
+	std::optional<winsock::Endpoint> RelayUDP;
 
 	std::wstring Debug = L"";
 
@@ -68,7 +82,7 @@ export namespace app {
 	template <typename T, std::size_t N, typename F>
 	constexpr auto to_array(const std::array<T, N>& src, F&& transform) {
 		std::array<std::invoke_result_t<F, T>, N> out{};
-		for (std::size_t i = 0; i < N; ++i)
+		for (std::size_t i{}; i < N; ++i)
 			out[i] = transform(src[i]);
 		return out;
 	}

@@ -42,6 +42,7 @@ set(MODULE_FILES
 	src/netThread.cppm
 	
 	src/core/net/artnet.cppm
+	src/core/net/relay.cppm
 	src/core/net/winsock.cppm
 	
 	src/core/render/shader.cppm

@@ -2,6 +2,7 @@ module;
 
 #include <ranges>
 #include <print>
+#include <thread>
 
 #include "glad.h"
 #include "imgui.h"
@@ -19,6 +20,7 @@ import net.artnet;
 import net.winsock;
 import fmtwrap;
 import netThread;
+import net.relay;
 import console;
 
 // Embed raw RGBA8 bytes (W*H*4 bytes)
@@ -115,10 +117,12 @@ export void ImGuiLoop(int& Channels) {
 	font_cfg.OversampleH = 3;
 	font_cfg.OversampleV = 3;
 	font_cfg.PixelSnapH = false;
+	const ImWchar font_ranges[] = { 0x0020, 0x00FF, 0x2600, 0x26FF, 0 };
 	io.FontDefault = io.Fonts->AddFontFromFileTTF(
 		"C:/Windows/Fonts/segoeui.ttf",
 		font_cfg.SizePixels,
-		&font_cfg
+		&font_cfg,
+		font_ranges
 	);
 	
 	ImGuiStyle& style = ImGui::GetStyle();
@@ -127,6 +131,8 @@ export void ImGuiLoop(int& Channels) {
 	ImGui_ImplGlfw_InitForOpenGL(app::GuiWindow, true);
 	ImGui_ImplOpenGL3_Init("#version 330 core");
 	
+	bool showRelaySettings = false;
+
 	while(app::running) {
 		
 		ImGui_ImplOpenGL3_NewFrame();
@@ -201,6 +207,11 @@ export void ImGuiLoop(int& Channels) {
 			app::NetConnection.reset();
 		}
 		ImGui::EndDisabled();
+		if (ImGui::Checkbox("Relay", &app::RelaySend)) {
+			glfwSwapInterval(app::RelaySend ? 1 : 0);
+		};
+		ImGui::SameLine();
+		if (ImGui::Button("Manage Relay")) showRelaySettings = true;
 		ImGui::End();
 
 		// UI Panel 3 -- Right
@@ -243,6 +254,45 @@ export void ImGuiLoop(int& Channels) {
 
 		ImGui::Text("%ls",app::Debug.c_str());
 		ImGui::End();
+
+		if (showRelaySettings) {
+			ImGui::Begin("Relay Settings", &showRelaySettings, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings);
+			if (!ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows))
+				showRelaySettings = false;
+			ImGui::BeginTable("##relay_table", 2);
+			ImGui::TableSetupColumn("##label", ImGuiTableColumnFlags_WidthFixed);
+			ImGui::TableSetupColumn("##input", ImGuiTableColumnFlags_WidthFixed, 200.0f);
+			ImGui::TableNextRow(); ImGui::TableNextColumn();
+			ImGui::Text("Address"); ImGui::TableNextColumn(); ImGui::SetNextItemWidth(-1);
+			ImGui::InputText("##relay_address", app::relayAddress.data(), app::relayAddress.size());
+			ImGui::TableNextRow(); ImGui::TableNextColumn();
+			ImGui::Text("Name");    ImGui::TableNextColumn(); ImGui::SetNextItemWidth(-1);
+			ImGui::InputText("##relay_name", app::displayName.data(), app::displayName.size());
+			ImGui::TableNextRow(); ImGui::TableNextColumn();
+			ImGui::Text("Access");  ImGui::TableNextColumn(); ImGui::SetNextItemWidth(-1);
+			ImGui::InputText("##relay_access", app::relayAccess.data(), app::relayAccess.size());
+			ImGui::EndTable();
+			ImGui::TextUnformatted(app::relayStatus.c_str());
+			if (app::RelayTCP) {
+				if (ImGui::Button("Disconnect"))
+					std::thread(relay::Disconnect).detach();
+			} else {
+				if (ImGui::Button("Connect")) {
+					app::RelaySend = true;
+					glfwSwapInterval(1);
+					std::thread(relay::Connect).detach();
+				}
+			}
+			ImGui::SameLine();
+			{
+				constexpr const char* modes[] = { "Send", "Listen" };
+				int modeIdx = as<int>(app::relayMode);
+				ImGui::SetNextItemWidth(80.0f);
+				if (ImGui::Combo("##relay_mode", &modeIdx, modes, 2))
+					app::relayMode = as<app::RelayMode>(modeIdx);
+			}
+			ImGui::End();
+		}
 
 		ImGui::Render(); // Render UI
 

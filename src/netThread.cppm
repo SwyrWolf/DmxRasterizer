@@ -6,11 +6,13 @@ module;
 #include <atomic>
 #include <format>
 #include <print>
+#include <span>
 
 export module netThread;
 import weretype;
 import net.winsock;
 import net.artnet;
+import net.relay;
 import render;
 import appState;
 
@@ -48,6 +50,11 @@ export void NetworkThread( std::stop_token st, winsock::Endpoint& ep ) {
 			} else { 
 				app::times.MeasureTimeDelta(r.value());
 				app::times.signalRender();
+				if (app::RelaySend && app::RelayUDP) {
+					relay::SendDmx(
+						r.value(), std::span<const u8>(buffer.data() + artnet::MIN_PACKET_SIZE, artnet::DMX_SIZE)
+					);
+				}
 			}
 		}
 		app::Debug = L"Stopped Listening for Art-Net packets.";
