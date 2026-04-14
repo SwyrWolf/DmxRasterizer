@@ -26,8 +26,10 @@ import render;
 import render.ui;
 import net.artnet;
 import net.winsock;
+import settings;
 
 int main() {
+	settings::Load();
 
 	auto init = Render::InitGLFW(Render::DmxTexture)
 		.and_then(Render::InitGLAD);

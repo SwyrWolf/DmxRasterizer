@@ -51,6 +51,7 @@ set(MODULE_FILES
 	
 	src/core/applog.cppm
 	src/core/console.cppm
+	src/core/settings.cppm
 )
 set_source_files_properties(${MODULE_FILES} PROPERTIES
 	COMPILE_OPTIONS "-fno-exceptions"

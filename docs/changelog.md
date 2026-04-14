@@ -1,3 +1,7 @@
+## Version 1.1.0
+New Feature:
+Added DmxRelay Support
+
 ## Version 1.0.3
 New Feature:
 Added toggle for viewing debug console

@@ -22,6 +22,7 @@ import fmtwrap;
 import netThread;
 import net.relay;
 import console;
+import settings;
 
 // Embed raw RGBA8 bytes (W*H*4 bytes)
 constexpr u8 Icon32[] = {
@@ -111,6 +112,8 @@ export void ImGuiLoop(int& Channels) {
 	ImGui::CreateContext();
 	ImGui::StyleColorsDark();
 	ImGuiIO& io = ImGui::GetIO();
+	io.IniFilename = nullptr;
+	io.LogFilename = nullptr;
 
 	ImFontConfig font_cfg;
 	font_cfg.SizePixels = 20.0f;
@@ -280,6 +283,7 @@ export void ImGuiLoop(int& Channels) {
 				if (ImGui::Button("Connect")) {
 					app::RelaySend = true;
 					glfwSwapInterval(1);
+					settings::Save();
 					std::thread(relay::Connect).detach();
 				}
 			}
