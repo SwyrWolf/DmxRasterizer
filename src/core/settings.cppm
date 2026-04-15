@@ -61,4 +61,4 @@ export namespace settings {
 		f << "mode="    << as<int>(app::relayMode)  << '\n';
 	}
 
-} // export namespace settings
+}

@@ -28,7 +28,10 @@ import net.artnet;
 import net.winsock;
 import settings;
 
-int main() {
+int main(int argc, char* argv[]) {
+	if (argc > 1) {
+		std::println("You have an argument but none are used!");
+	}
 	settings::Load();
 
 	auto init = Render::InitGLFW(Render::DmxTexture)

@@ -1,6 +1,8 @@
 ## Version 1.1.0
 New Feature:
 Added DmxRelay Support
+Fixes:
+Removed the imgui.ini file generation
 
 ## Version 1.0.3
 New Feature:

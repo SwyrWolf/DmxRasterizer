@@ -118,7 +118,7 @@ export namespace artnet {
 		}
 		
 		DMX_BinaryPacket pkt{};
-		std::memcpy(&pkt, buffer.data(), sizeof(DMX_BinaryPacket));
+		std::memcpy(&pkt, buffer.data(), std::min(buffer.size(), sizeof(DMX_BinaryPacket)));
 
 		if (pkt.operation != Op::Dmx) {
 			return std::unexpected(Err::OpCode);
@@ -126,11 +126,14 @@ export namespace artnet {
 			return std::unexpected(Err::DmxLength);
 		}
 
-		if (pkt.universeID > 9) {
+		if (pkt.universeID > 8) {
 			return pkt.universeID;
 		}   
   
 		const std::size_t offset   = pkt.universeID * (DMX_SIZE + UniOffset);
+		if (storage.size() < offset + 512) {
+			return std::unexpected(Err::SmallBuffer);
+		}
 		std::memcpy(storage.data() + offset, pkt.dmxData.data(), 512);
 		return pkt.universeID;
 	}
