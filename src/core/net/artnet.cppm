@@ -91,8 +91,7 @@ export namespace artnet {
 
 	// --- INTERFACE ---
 	enum class Err {
-		PacketSize_TooLarge,
-		PacketSize_TooSmall,
+		BufferSize_TooSmall,
 		Signature,
 		OpCode,
 		DmxLength,
@@ -110,9 +109,7 @@ export namespace artnet {
 	) -> std::expected<u16, Err> {
 
 		if (buffer.size() < MIN_PACKET_SIZE) {
-			return std::unexpected(Err::PacketSize_TooSmall);
-		} if (buffer.size() > MAX_PACKET_SIZE) {
-			return std::unexpected(Err::PacketSize_TooLarge);
+			return std::unexpected(Err::BufferSize_TooSmall);
 		} if (std::memcmp(buffer.data(), &ARTNET_SIGNATURE, 8) != 0) {
 			return std::unexpected(Err::Signature);
 		}
@@ -128,9 +125,9 @@ export namespace artnet {
 
 		if (pkt.universeID > 8) {
 			return pkt.universeID;
-		}   
+		}
   
-		const std::size_t offset   = pkt.universeID * (DMX_SIZE + UniOffset);
+		const std::size_t offset = pkt.universeID * (DMX_SIZE + UniOffset);
 		if (storage.size() < offset + 512) {
 			return std::unexpected(Err::SmallBuffer);
 		}

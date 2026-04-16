@@ -82,6 +82,7 @@ export namespace Render {
 		if (!gladLoadGLLoader(raw<GLADloadproc>(glfwGetProcAddress))) { 
 			return std::unexpected("Failed to initialize Glad");
 		}
+		glfwSwapInterval(1); // Enable Vsync on boot
 		return {};
 	}
 

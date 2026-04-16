@@ -1,6 +1,7 @@
 module;
 
 #include <array>
+#include <optional>
 #include <expected>
 #include <stop_token>
 #include <atomic>
@@ -31,17 +32,20 @@ void NetThreadWait() {
 	NetReady.store(false, std::memory_order_release);
 }
 
-export void NetworkThread( std::stop_token st, winsock::Endpoint& ep ) {
+export void NetworkThread( std::stop_token st, std::optional<winsock::Endpoint>& ep ) {
 	std::array<u8, 1024> buffer{};
 
 	while (!st.stop_requested()) {
 		NetThreadWait();
 		while (!st.stop_requested()) {
+			if (!ep.has_value()) break;
 
-			if (auto r = winsock::RecieveNetPacket(buffer, ep); !r) {
+			if (auto r = winsock::RecieveNetPacket(buffer, ep.value()); !r) {
 				if (r.error() == winsock::Err::recieve_SocketClosed) break;
 				std::println(stderr, "Failed to recieve DMX data.");
 				continue;
+			} else {
+				std::println("size: {}", r.value());
 			}
 			
 			if (auto r = artnet::ProcessDmxPacket(buffer, Render::DmxTexture.DmxData, 8); !r) {

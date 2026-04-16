@@ -1,14 +1,37 @@
 module;
 
+#define WIN32_LEAN_AND_MEAN
+#define NOMINMAX
+#include <windows.h>
+#include <shlobj.h>
+#include <objbase.h>
+
 #include <fstream>
 #include <sstream>
 #include <string>
 #include <string_view>
 #include <charconv>
+#include <filesystem>
 
 export module settings;
 import appState;
 import weretype;
+
+constexpr auto GetRoamingAppDataDir() -> std::filesystem::path {
+	PWSTR path = nullptr;
+	if (FAILED(SHGetKnownFolderPath(FOLDERID_RoamingAppData, 0, nullptr, &path))) {
+		return {};
+	}
+	
+	std::filesystem::path result = path;
+	CoTaskMemFree(path);
+	return result;
+}
+
+export namespace settings {
+	constexpr std::string_view FILE_NAME = "dmxr.cfg";
+	const auto fileDestination = GetRoamingAppDataDir() / "SwyrWolf" / FILE_NAME;
+}
 
 namespace settings_detail {
 
@@ -22,7 +45,7 @@ namespace settings_detail {
 		dst[len] = '\0';
 	}
 
-} // namespace settings_detail
+}
 
 export namespace settings {
 

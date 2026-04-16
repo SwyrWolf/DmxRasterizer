@@ -93,7 +93,8 @@ export namespace winsock {
 
 	// Validate_ipAddr("127.0.0.1") to verify ipv4 address and return as u32
 	auto validate_ipAddr(std::string_view Str) -> std::expected<u32, Err> {
-		if (Str == "LOCALHOST") return Eval_ipv4(127, 0, 0, 1);
+
+		if (Str == "localhost") return Eval_ipv4(127, 0, 0, 1);
 		if (Str == "any")       return as<u32>(0);
 
 		std::array<u8, 4> octets{};
@@ -187,8 +188,10 @@ export namespace winsock {
 
 	// If no error occurs, recvfrom returns the number of bytes received. 
 	// If the connection has been gracefully closed, the return value is zero. Otherwise, a value of SOCKET_ERROR
-	auto RecieveNetPacket(std::span<u8> dst, Endpoint& ep) 
-	-> std::expected<int, Err> {
+	auto RecieveNetPacket(
+		std::span<u8> dst, // storage destination
+		Endpoint& ep
+	) -> std::expected<int, Err> {
 
 		int SenderAddrSize = sizeof(ep.SenderAddr);
 		int bytes = recvfrom(ep.Socket, raw<char*>(dst.data()), dst.size(), 0, raw<sockaddr*>(&ep.SenderAddr), &SenderAddrSize);

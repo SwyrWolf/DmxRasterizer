@@ -38,8 +38,8 @@ set(MODULE_FILES
 	src/vendor/werelib/weretype.cppm
 	src/vendor/werelib/fmt.cppm
 
-	src/appState.cppm
-	src/netThread.cppm
+	src/core/appState.cppm
+	src/core/netThread.cppm
 	
 	src/core/net/artnet.cppm
 	src/core/net/relay.cppm

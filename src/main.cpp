@@ -53,7 +53,7 @@ int main(int argc, char* argv[]) {
 	auto ipStr = app::ipString();
 	auto Addr = winsock::CreateAddress(ipStr, as<u16>(app::ipPort)).and_then(winsock::OpenNetworkSocket);
 	if (!Addr) {
-		std::println(stderr, "Err: 0x{:x}", as<int>(Addr.error()));
+		std::println(stderr, "Winsock CreateAddr Err: 0x{:x}", as<int>(Addr.error()));
 		return -1;
 	}
 	app::NetConnection = std::move(*Addr);
@@ -64,7 +64,7 @@ int main(int argc, char* argv[]) {
 	app::Debug = std::format(L"Listening for Art-Net on [{}:{}]", std::wstring(ipStr.begin(), ipStr.end()), app::NetConnection->port);
 	
 
-	std::jthread artNetThread(::NetworkThread, std::ref(app::NetConnection.value()));
+	std::jthread artNetThread(::NetworkThread, std::ref(app::NetConnection));
 
 	glfwMakeContextCurrent(nullptr);
 	std::thread renderThread(
@@ -97,9 +97,11 @@ int main(int argc, char* argv[]) {
 	
 	glDeleteBuffers(1, &Render::VBO);
 	glfwTerminate();
-	if (auto r = winsock::CloseNetworkSocket(app::NetConnection.value()); !r) {
-		std::println("Winsock CloseNetworkSocket Failed: 0x{:x}", as<int>(r.error()));
+	if (app::NetConnection.has_value()) {
+		if (auto r = winsock::CloseNetworkSocket(app::NetConnection.value()); !r) {
+			std::println("Winsock CloseNetworkSocket Failed: 0x{:x}", as<int>(r.error()));
+		}
+		app::NetConnection.reset();
 	}
-	app::NetConnection.reset();
 	std::exit(0);
 }

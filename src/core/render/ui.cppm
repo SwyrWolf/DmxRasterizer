@@ -1,6 +1,7 @@
 module;
 
 #include <ranges>
+#include <algorithm>
 #include <print>
 #include <thread>
 
@@ -34,6 +35,10 @@ constexpr u8 Icon16[] = {
 constexpr GLFWimage imgs[2]{
 	{ 16, 16, const_cast<u8*>(Icon16)},
 	{ 32, 32, const_cast<u8*>(Icon32)},
+};
+
+constexpr u8 FontAwesomeTTF[] = {
+	#embed EMBED(resource/fa-solid-900.ttf)
 };
 
 int fbw{}, fbh{};
@@ -128,6 +133,16 @@ export void ImGuiLoop(int& Channels) {
 		font_ranges
 	);
 	
+	ImFontConfig fa_cfg;
+	fa_cfg.MergeMode = true; // merge glyphs into the previous font
+	fa_cfg.FontDataOwnedByAtlas = false; // data is constexpr, don't free it
+	fa_cfg.GlyphMinAdvanceX = font_cfg.SizePixels; // monospaced icons
+	static const ImWchar fa_ranges[] = { 0xF000, 0xF999, 0 };
+	io.Fonts->AddFontFromMemoryTTF(
+		const_cast<u8*>(FontAwesomeTTF), sizeof(FontAwesomeTTF),
+		font_cfg.SizePixels, &fa_cfg, fa_ranges
+	);
+	
 	ImGuiStyle& style = ImGui::GetStyle();
 	style.Colors[ImGuiCol_WindowBg] = ImVec4(0.12f, 0.12f, 0.12f, 1.0f);
 
@@ -147,7 +162,6 @@ export void ImGuiLoop(int& Channels) {
 		ImGui::SetNextWindowPos(ImVec2(Panels[0].x, Panels[0].y), ImGuiCond_Always);
 		ImGui::SetNextWindowSize(ImVec2(Panels[0].w, Panels[0].h), ImGuiCond_Always);
 		ImGui::Begin("DmxMainLog", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize);
-		ImGui::Text("DMX Rasterizer");
 		ImGui::Text("FPS: %.1f", ImGui::GetIO().Framerate);
 
 		std::string keys_pressed;
@@ -190,13 +204,20 @@ export void ImGuiLoop(int& Channels) {
 		ImGui::BeginDisabled(app::NetConnection.has_value());
 		if (ImGui::Button("Connect")) {
 			if (winsock::winsockInit()) {
-				auto Addr = winsock::CreateAddress(app::ipString(), as<u16>(app::ipPort)).and_then(winsock::OpenNetworkSocket);
+
+				std::string ip = app::ipString();
+				std::ranges::transform(ip, ip.begin(), [](u8 c) {
+					return as<char>(std::tolower(c));
+				});
+
+				auto Addr = winsock::CreateAddress(ip, as<u16>(app::ipPort)).and_then(winsock::OpenNetworkSocket);
 				if (!Addr) {
-					std::println(stderr, "Err: 0x{:x}", as<int>(Addr.error()));
-					break;
+					std::println(stderr, "Winsock CreateAddr (ui) Err: 0x{:x}", as<int>(Addr.error()));
+					app::Debug = L"Bad address input: " + std::wstring(ip.begin(), ip.end());
+				} else {
+					app::NetConnection.emplace(std::move(*Addr));
+					::ContinueNetThread();
 				}
-				app::NetConnection.emplace(std::move(*Addr));
-				::ContinueNetThread();
 			}
 		}
 		ImGui::EndDisabled();
@@ -214,7 +235,7 @@ export void ImGuiLoop(int& Channels) {
 			glfwSwapInterval(app::RelaySend ? 1 : 0);
 		};
 		ImGui::SameLine();
-		if (ImGui::Button("Manage Relay")) showRelaySettings = true;
+		if (ImGui::Button("\xEF\x80\x93 Manage Relay")) showRelaySettings = true;
 		ImGui::End();
 
 		// UI Panel 3 -- Right
@@ -262,19 +283,20 @@ export void ImGuiLoop(int& Channels) {
 			ImGui::Begin("Relay Settings", &showRelaySettings, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings);
 			if (!ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows))
 				showRelaySettings = false;
-			ImGui::BeginTable("##relay_table", 2);
-			ImGui::TableSetupColumn("##label", ImGuiTableColumnFlags_WidthFixed);
-			ImGui::TableSetupColumn("##input", ImGuiTableColumnFlags_WidthFixed, 200.0f);
-			ImGui::TableNextRow(); ImGui::TableNextColumn();
-			ImGui::Text("Address"); ImGui::TableNextColumn(); ImGui::SetNextItemWidth(-1);
-			ImGui::InputText("##relay_address", app::relayAddress.data(), app::relayAddress.size());
-			ImGui::TableNextRow(); ImGui::TableNextColumn();
-			ImGui::Text("Name");    ImGui::TableNextColumn(); ImGui::SetNextItemWidth(-1);
-			ImGui::InputText("##relay_name", app::displayName.data(), app::displayName.size());
-			ImGui::TableNextRow(); ImGui::TableNextColumn();
-			ImGui::Text("Access");  ImGui::TableNextColumn(); ImGui::SetNextItemWidth(-1);
-			ImGui::InputText("##relay_access", app::relayAccess.data(), app::relayAccess.size());
-			ImGui::EndTable();
+			if (ImGui::BeginTable("##relay_table", 2)) {
+				ImGui::TableSetupColumn("##label", ImGuiTableColumnFlags_WidthFixed);
+				ImGui::TableSetupColumn("##input", ImGuiTableColumnFlags_WidthFixed, 200.0f);
+				ImGui::TableNextRow(); ImGui::TableNextColumn();
+				ImGui::Text("Address"); ImGui::TableNextColumn(); ImGui::SetNextItemWidth(-1);
+				ImGui::InputText("##relay_address", app::relayAddress.data(), app::relayAddress.size());
+				ImGui::TableNextRow(); ImGui::TableNextColumn();
+				ImGui::Text("Name");    ImGui::TableNextColumn(); ImGui::SetNextItemWidth(-1);
+				ImGui::InputText("##relay_name", app::displayName.data(), app::displayName.size());
+				ImGui::TableNextRow(); ImGui::TableNextColumn();
+				ImGui::Text("Access");  ImGui::TableNextColumn(); ImGui::SetNextItemWidth(-1);
+				ImGui::InputText("##relay_access", app::relayAccess.data(), app::relayAccess.size());
+				ImGui::EndTable();
+			}
 			ImGui::TextUnformatted(app::relayStatus.c_str());
 			if (app::RelayTCP) {
 				if (ImGui::Button("Disconnect"))
