@@ -27,12 +27,8 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(spout2)
 
-set(SOURCE_FILES 
-	src/main.cpp
-)
-set_source_files_properties(${SOURCE_FILES} PROPERTIES
-	COMPILE_OPTIONS "-fno-exceptions"
-)
+set(SOURCE_FILES src/main.cpp)
+set_source_files_properties(${SOURCE_FILES} PROPERTIES COMPILE_OPTIONS "$<$<CONFIG:Release>:-fno-exceptions>")
 
 set(MODULE_FILES
 	src/vendor/werelib/weretype.cppm
@@ -53,9 +49,7 @@ set(MODULE_FILES
 	src/core/console.cppm
 	src/core/settings.cppm
 )
-set_source_files_properties(${MODULE_FILES} PROPERTIES
-	COMPILE_OPTIONS "-fno-exceptions"
-)
+set_source_files_properties(${MODULE_FILES} PROPERTIES COMPILE_OPTIONS "$<$<CONFIG:Release>:-fno-exceptions>")
 
 set(IMGUI_SRC
 	src/vendor/imgui/imgui.cpp

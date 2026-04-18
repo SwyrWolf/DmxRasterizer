@@ -36,29 +36,21 @@ export {
 	[[nodiscard]] constexpr ToType raw(From&& value) {
 		return reinterpret_cast<ToType>(value);
 	}
+}
 
-	// // enumv(V) -- Enumerate View -- wrapper for std::views::enumerate
-	// template <typename R>
-	// constexpr auto enumv(R&& range) {
-	// 	return std::views::enumerate(std::forward<R>(range));
-	// }
-
-	// // asBytes(V); || std::array<bytes, n> -- Convert data into an array of bytes
-	// template <typename T>
-	// [[nodiscard]] constexpr auto asBytes(const T& value) -> std::array<byte, sizeof(T)> {
-	// 	static_assert(std::is_trivially_copyable_v<T>, "to_bytes requires a trivially copyable type");
-	// 	union {
-	// 		T input;
-	// 		std::array<byte, sizeof(T)> output;
-	// 	} u = { value };
-	// 	return u.output;
-	// }
-
-	// // bigEndianSwap(V) -- Convert endian order (only on little endian devices)
-	// template <typename T>
-	// constexpr T bigEndianSwap(T value) {
-	// 	return std::endian::native == std::endian::little
-	// 	? std::byteswap(value)
-	// 	: value;
-	// }
+export namespace were {
+	// thru(R) -- Enumerate View -- wrapper for std::views::enumerate
+	#if defined(__APPLE__) || defined(__MACH__)
+		// fallback for Apple w/ LLVM Clang compiler and libc++ support
+		template <typename R>
+		constexpr auto thru(R&& range) {
+			return std::views::zip(std::views::iota(0uz), std::forward<R>(range));
+		}
+	#else
+		// Standard C++ implementation
+		template <typename R>
+		constexpr auto thru(R&& range) {
+			return std::views::enumerate(std::forward<R>(range));
+		}
+	#endif
 }

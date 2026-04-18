@@ -34,6 +34,7 @@ void NetThreadWait() {
 
 export void NetworkThread( std::stop_token st, std::optional<winsock::Endpoint>& ep ) {
 	std::array<u8, 1024> buffer{};
+	std::size_t bytes{};
 
 	while (!st.stop_requested()) {
 		NetThreadWait();
@@ -45,11 +46,13 @@ export void NetworkThread( std::stop_token st, std::optional<winsock::Endpoint>&
 				std::println(stderr, "Failed to recieve DMX data.");
 				continue;
 			} else {
-				std::println("size: {}", r.value());
+				if (r.value() < 18 || r.value() > 530) continue;
+				bytes = as<std::size_t>(r.value());
 			}
-			
-			if (auto r = artnet::ProcessDmxPacket(buffer, Render::DmxTexture.DmxData, 8); !r) {
-				std::println(stderr, "Failed to process DMX data. {}", as<int>(r.value()));
+
+			auto data = std::span<const u8>(buffer.data(), bytes);
+			if (auto r = artnet::ProcessDmxPacket(data, Render::DmxTexture.DmxData, 8); !r) {
+				std::println(stderr, "Failed to process DMX data. {}", as<int>(r.error()));
 				continue;
 			} else { 
 				app::times.MeasureTimeDelta(r.value());

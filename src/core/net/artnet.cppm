@@ -95,7 +95,8 @@ export namespace artnet {
 		Signature,
 		OpCode,
 		DmxLength,
-		SmallBuffer
+		SmallBuffer,
+		InvalidUniverse,
 	};
 
 	constexpr std::size_t MIN_PACKET_SIZE = 18;
@@ -124,7 +125,7 @@ export namespace artnet {
 		}
 
 		if (pkt.universeID > 8) {
-			return pkt.universeID;
+			return std::unexpected(Err::InvalidUniverse);
 		}
   
 		const std::size_t offset = pkt.universeID * (DMX_SIZE + UniOffset);

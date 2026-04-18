@@ -3,8 +3,9 @@ New Feature:
 Added DmxRelay Support
 Fixes:
 Removed the imgui.ini file generation
-Crash on exit when disconnected from art-net
 Reading 10th art-net universe
+Crash on exit when disconnected from art-net
+Crash on recieving non-DMX packets
 
 ## Version 1.0.3
 New Feature:

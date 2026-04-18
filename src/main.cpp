@@ -2,7 +2,6 @@
 #include <windows.h>
 #include <ws2tcpip.h>
 
-#include <unordered_map>
 #include <thread>
 #include <expected>
 #include <optional>
@@ -28,10 +27,7 @@ import net.artnet;
 import net.winsock;
 import settings;
 
-int main(int argc, char* argv[]) {
-	if (argc > 1) {
-		std::println("You have an argument but none are used!");
-	}
+int main() {
 	settings::Load();
 
 	auto init = Render::InitGLFW(Render::DmxTexture)
