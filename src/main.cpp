@@ -1,6 +1,4 @@
-#include <winsock2.h>
 #include <windows.h>
-#include <ws2tcpip.h>
 
 #include <thread>
 #include <expected>
@@ -11,13 +9,11 @@
 
 #include "glad.h"
 #include <glfw3.h>
-#include <SpoutGL/SpoutSender.h>
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
 
 import weretype;
-import fmtwrap;
 import appState;
 import netThread;
 import shader;
@@ -60,9 +56,12 @@ int main() {
 	app::Debug = std::format(L"Listening for Art-Net on [{}:{}]", std::wstring(ipStr.begin(), ipStr.end()), app::NetConnection->port);
 	
 
-	// std::jthread artNetThread(::NetworkThread, std::ref(app::NetConnection));
-	::NetManager::create(Render::DmxTexture.DmxData);
-	::netManager->start(app::NetConnection);
+	app::netManager = NetManager::create(
+		Render::DmxTexture.DmxData,
+		&app::times,
+		&app::Debug
+	);
+	app::netManager->start(app::NetConnection);
 
 	glfwMakeContextCurrent(nullptr);
 	std::thread renderThread(
@@ -87,7 +86,7 @@ int main() {
 	}
 	
 	app::running = false;
-	::netManager->terminate();
+	app::netManager->terminate();
 	app::times.signalRender();
 	renderThread.join();
 	guiThread.join();

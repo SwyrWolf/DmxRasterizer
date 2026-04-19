@@ -12,6 +12,7 @@ export module appState;
 import weretype;
 import applog;
 import net.winsock;
+import netThread;
 
 export namespace app {
 	std::string Version{"1.0.0"};
@@ -50,6 +51,8 @@ export namespace app {
 	std::optional<std::string> bindIp;
 
 	applog::UniverseTimer times{};
+	// NetManager netManager;
+	std::unique_ptr<NetManager> netManager;
 
 	auto ipString() -> std::string {
 		auto len = std::char_traits<char>::length(ipStr.data());

@@ -14,34 +14,55 @@ export module netThread;
 import weretype;
 import net.winsock;
 import net.artnet;
-import net.relay;
-import appState;
+// import net.relay;
+import applog;
 
 export class NetManager {
 private:
-	std::atomic<bool> Operating{true};
+	std::atomic<bool> m_operating{true};
 	std::array<u8, 1024> m_buffer{};
 	std::jthread m_worker;
-	std::span<u8> m_dmxData;
 
-public:
-	static void create(std::span<u8> storage); // declaration only
+	std::span<u8> mv_dmxData;
+	applog::UniverseTimer* p_times = nullptr;
+	std::wstring* p_debug = nullptr;
+	std::optional<winsock::Endpoint>* p_netConn = nullptr;
+	std::span<char> mv_ipStr;
+	
+	public:
+	NetManager() = default;
+	~NetManager() {
+		terminate();
+	}
+	static auto create(
+		std::span<u8> storage,
+		applog::UniverseTimer* times,
+		std::wstring* debug
+	) -> std::unique_ptr<NetManager> {
+		auto manager = std::unique_ptr<NetManager>(new NetManager());
+		manager->mv_dmxData = storage;
+		manager->p_times = times;
+		manager->p_debug = debug;
+
+		return manager;
+	}
 
 	void start(std::optional<winsock::Endpoint>& connection) {
 		m_worker = std::jthread([this, &connection](std::stop_token st) {
 			this->operatingLoop(st, connection);
 		});
 	}
+
 	void resume() {
-		Operating.store(true, std::memory_order_release);
-		Operating.notify_one();
-		auto ipStr = app::ipString();
-		app::Debug = std::format(L"Listening for Art-Net on [{}:{}]", std::wstring(ipStr.begin(), ipStr.end()), app::NetConnection->port);
+		m_operating.store(true, std::memory_order_release);
+		m_operating.notify_one();
 	}
+
 	void wait() {
-		Operating.wait(false, std::memory_order_acquire);
-		Operating.store(false, std::memory_order_release);
+		m_operating.wait(false, std::memory_order_acquire);
+		m_operating.store(false, std::memory_order_release);
 	}
+
 	void terminate() {
 		m_worker.request_stop();
 	}
@@ -65,39 +86,20 @@ private:
 				auto bytes = as<std::size_t>(*R_NetPacket);
 
 				auto data = std::span<const u8>(m_buffer.data(), bytes);
-				if (auto r = artnet::ProcessDmxPacket(data, m_dmxData, 8); !r) {
+				if (auto r = artnet::ProcessDmxPacket(data, mv_dmxData, 8); !r) {
 					std::println(stderr, "Failed to process DMX data. {}", as<int>(r.error()));
 					continue;
 				} else { 
-					app::times.MeasureTimeDelta(r.value());
-					app::times.signalRender();
-					if (app::RelaySend && app::RelayUDP) {
-						relay::SendDmx(
-							r.value(), std::span<const u8>(m_buffer.data() + artnet::MIN_PACKET_SIZE, artnet::DMX_SIZE)
-						);
-					}
+					p_times->MeasureTimeDelta(r.value());
+					p_times->signalRender();
+					// if (app::RelaySend && app::RelayUDP) {
+					// 	relay::SendDmx(
+					// 		r.value(), std::span<const u8>(m_buffer.data() + artnet::MIN_PACKET_SIZE, artnet::DMX_SIZE)
+					// 	);
+					// }
 				}
 			}
-			app::Debug = L"Stopped Listening for Art-Net packets.";
+			*p_debug = L"Stopped Listening for Art-Net packets.";
 		}
 	}
 };
-
-export class ManagedOptional {
-	std::optional<NetManager> m_value;
-	friend class NetManager;
-
-public:
-	const std::optional<NetManager>& get() const { return m_value; }
-	NetManager* operator->() { return &m_value.value(); }
-	const NetManager* operator->() const { return &m_value.value(); }
-	bool exists() const { return m_value.has_value(); }
-	explicit operator bool() const { return m_value.has_value(); }
-};
-
-export ManagedOptional netManager;
-
-void NetManager::create(std::span<u8> storage) {
-	netManager.m_value.emplace();
-	netManager.m_value->m_dmxData = storage;
-}

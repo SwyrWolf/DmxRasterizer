@@ -217,7 +217,9 @@ export void ImGuiLoop(int& Channels) {
 				} else {
 					app::NetConnection.emplace(std::move(*Addr));
 					// ::ContinueNetThread();
-					::netManager->resume();
+					app::netManager->resume();
+					auto ipStr = app::ipString();
+					app::Debug = std::format(L"Listening for Art-Net on [{}:{}]", std::wstring(ipStr.begin(), ipStr.end()), app::NetConnection->port);
 				}
 			}
 		}
