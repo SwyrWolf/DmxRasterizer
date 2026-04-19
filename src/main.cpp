@@ -60,7 +60,9 @@ int main() {
 	app::Debug = std::format(L"Listening for Art-Net on [{}:{}]", std::wstring(ipStr.begin(), ipStr.end()), app::NetConnection->port);
 	
 
-	std::jthread artNetThread(::NetworkThread, std::ref(app::NetConnection));
+	// std::jthread artNetThread(::NetworkThread, std::ref(app::NetConnection));
+	::netManager.emplace();
+	::netManager->Start(app::NetConnection);
 
 	glfwMakeContextCurrent(nullptr);
 	std::thread renderThread(
@@ -70,7 +72,6 @@ int main() {
 		Render::framebuffer,
 		Render::texture
 	);
-
 
 	// Creation of the Gui Window required on main thread to prevent nullptr race condition
 	if (!SetupWindow()) {
@@ -86,7 +87,8 @@ int main() {
 	}
 	
 	app::running = false;
-	artNetThread.request_stop();
+	// artNetThread.request_stop();
+	::netManager->worker.request_stop();
 	app::times.signalRender();
 	renderThread.join();
 	guiThread.join();

@@ -216,7 +216,8 @@ export void ImGuiLoop(int& Channels) {
 					app::Debug = L"Bad address input: " + std::wstring(ip.begin(), ip.end());
 				} else {
 					app::NetConnection.emplace(std::move(*Addr));
-					::ContinueNetThread();
+					// ::ContinueNetThread();
+					::netManager->Resume();
 				}
 			}
 		}
