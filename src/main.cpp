@@ -61,8 +61,8 @@ int main() {
 	
 
 	// std::jthread artNetThread(::NetworkThread, std::ref(app::NetConnection));
-	::netManager.emplace();
-	::netManager->Start(app::NetConnection);
+	::NetManager::create(Render::DmxTexture.DmxData);
+	::netManager->start(app::NetConnection);
 
 	glfwMakeContextCurrent(nullptr);
 	std::thread renderThread(
@@ -87,8 +87,7 @@ int main() {
 	}
 	
 	app::running = false;
-	// artNetThread.request_stop();
-	::netManager->worker.request_stop();
+	::netManager->terminate();
 	app::times.signalRender();
 	renderThread.join();
 	guiThread.join();

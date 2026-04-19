@@ -35,8 +35,8 @@ set(MODULE_FILES
 	src/vendor/werelib/fmt.cppm
 
 	src/core/appState.cppm
-	src/core/netThread.cppm
 	
+	src/core/net/netThread.cppm
 	src/core/net/artnet.cppm
 	src/core/net/relay.cppm
 	src/core/net/winsock.cppm
@@ -45,7 +45,7 @@ set(MODULE_FILES
 	src/core/render/render.cppm
 	src/core/render/ui.cppm
 	
-	src/core/applog.cppm
+	src/core/log/applog.cppm
 	src/core/console.cppm
 	src/core/settings.cppm
 )

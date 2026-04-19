@@ -8,19 +8,21 @@ export module applog;
 import weretype;
 
 export namespace applog {
+	using TimePoint = std::chrono::steady_clock::time_point;
+	using TimeDelta = std::chrono::duration<f64>;
 
 	class UniverseTimer {
-		std::array<std::chrono::steady_clock::time_point, 9> m_TimeRecord{};
-		std::array<std::chrono::duration<double>, 9>         m_TimeDelta{};
+		std::array<TimePoint, 9> m_TimeRecord{};
+		std::array<TimeDelta, 9> m_TimeDelta{};
 
-		std::atomic<bool> renderReady{true};
+		std::atomic<bool> m_renderReady{true};
 
 	public:
 		void MeasureTimeDelta(u16 universeID) {
 			auto now = std::chrono::steady_clock::now();
 
 			if (m_TimeRecord[universeID].time_since_epoch().count() == 0) {
-				m_TimeDelta[universeID] = std::chrono::duration<double>::zero();
+				m_TimeDelta[universeID] = std::chrono::duration<f64>::zero();
 			} else {
 				m_TimeDelta[universeID] = now - m_TimeRecord[universeID];
 			}
@@ -37,13 +39,13 @@ export namespace applog {
 		}
 
 		void signalRender() {
-			renderReady.store(true, std::memory_order_release);
-			renderReady.notify_one();
+			m_renderReady.store(true, std::memory_order_release);
+			m_renderReady.notify_one();
 		}
 
 		void waitForRender() {
-			renderReady.wait(false, std::memory_order_acquire);
-			renderReady.store(false, std::memory_order_release);
+			m_renderReady.wait(false, std::memory_order_acquire);
+			m_renderReady.store(false, std::memory_order_release);
 		}
 	};
 }

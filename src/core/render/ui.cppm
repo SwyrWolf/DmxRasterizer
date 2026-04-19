@@ -217,7 +217,7 @@ export void ImGuiLoop(int& Channels) {
 				} else {
 					app::NetConnection.emplace(std::move(*Addr));
 					// ::ContinueNetThread();
-					::netManager->Resume();
+					::netManager->resume();
 				}
 			}
 		}
