@@ -33,6 +33,15 @@ switch ($pMode) {
 		ninja -C build
 		return
 	}
+	"--releaseZip" {
+		Write-Host "Generating Release Build! & Zipping"
+		cmake -G Ninja -B ./build -DCMAKE_BUILD_TYPE=Release
+		ninja -C build
+
+		$input = Read-Host "Suffix:"
+		New-DistZip $input
+		return
+	}
 	"--releaseDist" {
 		while ($true) {
 			$input = Read-Host "Incriment new release (y/n)"
