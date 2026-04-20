@@ -6,6 +6,7 @@
 #include <format>
 #include <string>
 #include <print>
+#include <span>
 
 #include "glad.h"
 #include <glfw3.h>
@@ -21,6 +22,7 @@ import render;
 import render.ui;
 import net.artnet;
 import net.winsock;
+import net.relay;
 import settings;
 
 int main() {
@@ -62,6 +64,15 @@ int main() {
 		&app::Debug
 	);
 	app::netManager->start(app::NetConnection);
+
+	relay::onDmxReceived = [](u16 universe, std::span<const u8> data) {
+		constexpr std::size_t uniStride = 512 + 8;
+		std::size_t offset = universe * uniStride;
+		if (offset + 512 <= Render::DmxTexture.DmxData.size()) {
+			std::memcpy(Render::DmxTexture.DmxData.data() + offset, data.data(), 512);
+		}
+		app::times.signalRender();
+	};
 
 	glfwMakeContextCurrent(nullptr);
 	std::thread renderThread(

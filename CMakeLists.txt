@@ -43,7 +43,11 @@ set(MODULE_FILES
 	
 	src/core/render/shader.cppm
 	src/core/render/render.cppm
-	src/core/render/ui.cppm
+
+	src/core/render/ui/util.ui.cppm
+	src/core/render/ui/ui.cppm
+	src/core/render/ui/footer.cppm
+	src/core/render/ui/sidebar.cppm
 	
 	src/core/log/applog.cppm
 	src/core/console.cppm

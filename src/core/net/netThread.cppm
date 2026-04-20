@@ -14,7 +14,7 @@ export module netThread;
 import weretype;
 import net.winsock;
 import net.artnet;
-// import net.relay;
+import net.relay;
 import applog;
 
 export class NetManager {
@@ -92,11 +92,11 @@ private:
 				} else { 
 					p_times->MeasureTimeDelta(r.value());
 					p_times->signalRender();
-					// if (app::RelaySend && app::RelayUDP) {
-					// 	relay::SendDmx(
-					// 		r.value(), std::span<const u8>(m_buffer.data() + artnet::MIN_PACKET_SIZE, artnet::DMX_SIZE)
-					// 	);
-					// }
+					if (relay::isSending && relay::udpEndpoint) {
+						relay::SendDmx(
+							r.value(), std::span<const u8>(m_buffer.data() + artnet::MIN_PACKET_SIZE, artnet::DMX_SIZE)
+						);
+					}
 				}
 			}
 			*p_debug = L"Stopped Listening for Art-Net packets.";

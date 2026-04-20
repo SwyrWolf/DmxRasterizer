@@ -15,9 +15,10 @@ module;
 
 export module settings;
 import appState;
+import net.relay;
 import weretype;
 
-constexpr auto GetRoamingAppDataDir() -> std::filesystem::path {
+constexpr auto dir_AppDataRoaming() -> std::filesystem::path {
 	PWSTR path = nullptr;
 	if (FAILED(SHGetKnownFolderPath(FOLDERID_RoamingAppData, 0, nullptr, &path))) {
 		return {};
@@ -28,30 +29,19 @@ constexpr auto GetRoamingAppDataDir() -> std::filesystem::path {
 	return result;
 }
 
+template<std::size_t N>
+void fill(std::array<char, N>& dst, std::string_view src) {
+	auto len = std::min(src.size(), N - 1);
+	src.copy(dst.data(), len);
+	dst[len] = '\0';
+}
+
 export namespace settings {
 	constexpr std::string_view FILE_NAME = "dmxr.cfg";
-	const auto fileDestination = GetRoamingAppDataDir() / "SwyrWolf" / FILE_NAME;
-}
-
-namespace settings_detail {
-
-	static constexpr std::string_view SETTINGS_FILE = "dmxrasterizer.cfg";
-
-	// Copy at most N-1 chars from src into a char array, always null-terminate
-	template<std::size_t N>
-	void fill(std::array<char, N>& dst, std::string_view src) {
-		auto len = std::min(src.size(), N - 1);
-		src.copy(dst.data(), len);
-		dst[len] = '\0';
-	}
-
-}
-
-export namespace settings {
+	const auto fileDestination = dir_AppDataRoaming() / "SwyrWolf" / FILE_NAME;
 
 	void Load() {
-		using namespace settings_detail;
-		std::ifstream f{ SETTINGS_FILE.data() };
+		std::ifstream f{ fileDestination };
 		if (!f.is_open()) return;
 
 		std::string line;
@@ -62,26 +52,27 @@ export namespace settings {
 			std::string_view key{ line.data(), eq };
 			std::string_view val{ line.data() + eq + 1, line.size() - eq - 1 };
 
-			if (key == "address") fill(app::relayAddress, val);
-			else if (key == "name")    fill(app::displayName, val);
-			else if (key == "access")  fill(app::relayAccess, val);
+			if (key == "address") fill(relay::address, val);
+			else if (key == "name")    fill(relay::displayName, val);
+			else if (key == "access")  fill(relay::access, val);
 			else if (key == "mode") {
 				int m{};
 				std::from_chars(val.data(), val.data() + val.size(), m);
-				app::relayMode = as<app::RelayMode>(m);
+				relay::mode = as<relay::Mode>(m);
 			}
 		}
 	}
 
 	void Save() {
-		using namespace settings_detail;
-		std::ofstream f{ SETTINGS_FILE.data(), std::ios::trunc };
+		std::filesystem::create_directories(fileDestination.parent_path());
+		std::ofstream f{ fileDestination, std::ios::trunc };
+
 		if (!f.is_open()) return;
 
-		f << "address=" << app::relayAddress.data() << '\n';
-		f << "name="    << app::displayName.data()  << '\n';
-		f << "access="  << app::relayAccess.data()  << '\n';
-		f << "mode="    << as<int>(app::relayMode)  << '\n';
+		f << "address=" << relay::address.data() << '\n';
+		f << "name="    << relay::displayName.data()  << '\n';
+		f << "access="  << relay::access.data()  << '\n';
+		f << "mode="    << as<int>(relay::mode)  << '\n';
 	}
 
 }

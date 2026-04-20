@@ -3,8 +3,8 @@ module;
 #include <array>
 #include <charconv>
 #include <string>
-#include <string_view>
 #include <expected>
+#include <optional>
 #include <thread>
 #include <vector>
 #include <span>
@@ -16,8 +16,24 @@ module;
 export module net.relay;
 import weretype;
 import net.winsock;
-import appState;
-import render;
+
+export namespace relay {
+	std::array<char, 64> address = {""};
+	std::array<char, 64> access  = {""};
+	std::array<char, 64> displayName = {""};
+	std::string status = "Not connected";
+	u32 sessionID{};
+	std::array<u8, 32> token{};
+	bool isSending = false; // replaces app::RelaySend
+
+	enum class Mode { Send = 0, Listen = 1 };
+	Mode mode{ Mode::Send };
+
+	std::optional<winsock::Endpoint> tcpEndpoint;
+	std::optional<winsock::Endpoint> udpEndpoint;
+
+	void(*onDmxReceived)(u16 universe, std::span<const u8> data) = nullptr;
+}
 
 static std::jthread g_tcpThread;
 static std::jthread g_udpThread;
@@ -155,30 +171,30 @@ export namespace relay {
 	}
 
 	void Connect() {
-		std::string_view addrField{ app::relayAddress.data() };
+		std::string_view addrField{ relay::address.data() };
 		auto parsed = ParseAddress(addrField);
-		if (!parsed) { app::relayStatus = parsed.error(); return; }
+		if (!parsed) { relay::status = parsed.error(); return; }
 		auto [host, port] = *parsed;
 
-		app::relayStatus = "Connecting...";
+		relay::status = "Connecting...";
 
 		// Close existing sockets first (unblocks any blocking recv in old threads)
-		if (app::RelayTCP) { closesocket(app::RelayTCP->Socket); app::RelayTCP->Socket = INVALID_SOCKET; }
-		if (app::RelayUDP) { closesocket(app::RelayUDP->Socket); app::RelayUDP->Socket = INVALID_SOCKET; }
+		if (relay::tcpEndpoint) { closesocket(relay::tcpEndpoint->Socket); relay::tcpEndpoint->Socket = INVALID_SOCKET; }
+		if (relay::udpEndpoint) { closesocket(relay::udpEndpoint->Socket); relay::udpEndpoint->Socket = INVALID_SOCKET; }
 		// Join old threads (they'll exit because their socket is now closed)
 		g_tcpThread = {};
 		g_udpThread = {};
-		app::RelayTCP.reset();
-		app::RelayUDP.reset();
+		relay::tcpEndpoint.reset();
+		relay::udpEndpoint.reset();
 
 		auto tcp = winsock::ConnectTCP(host, port);
-		if (!tcp) { app::relayStatus = "TCP connect failed"; return; }
+		if (!tcp) { relay::status = "TCP connect failed"; return; }
 
 		// --- Build and send Handshake ---
-		std::string_view name  { app::displayName.data() };
-		std::string_view access{ app::relayAccess.data() };
+		std::string_view name  { relay::displayName.data() };
+		std::string_view accessObj{ relay::access.data() };
 		u16 nameLen   = as<u16>(name.size());
-		u16 accessLen = as<u16>(access.size());
+		u16 accessLen = as<u16>(accessObj.size());
 		u32 bodyLen   = 2u + nameLen + 2u + accessLen;
 
 		TCPHeader hdr{};
@@ -194,9 +210,9 @@ export namespace relay {
 			|| !relay_detail::sendAll(sock, &nameLenBE,   2)
 			|| !relay_detail::sendAll(sock, name.data(),  as<int>(nameLen))
 			|| !relay_detail::sendAll(sock, &accessLenBE, 2)
-			|| !relay_detail::sendAll(sock, access.data(),as<int>(accessLen))) {
+			|| !relay_detail::sendAll(sock, accessObj.data(),as<int>(accessLen))) {
 			(void)winsock::CloseNetworkSocket(*tcp);
-			app::relayStatus = "Handshake send failed";
+			relay::status = "Handshake send failed";
 			return;
 		}
 
@@ -204,12 +220,12 @@ export namespace relay {
 		TCPHeader ackHdr{};
 		if (!relay_detail::recvAll(sock, &ackHdr, sizeof(ackHdr))) {
 			(void)winsock::CloseNetworkSocket(*tcp);
-			app::relayStatus = "Handshake: no response";
+			relay::status = "Handshake: no response";
 			return;
 		}
 		if (ackHdr.signature != TCP_SIGNATURE || ackHdr.type != as<u8>(PacketType::HandshakeAck)) {
 			(void)winsock::CloseNetworkSocket(*tcp);
-			app::relayStatus = "Handshake: bad response";
+			relay::status = "Handshake: bad response";
 			return;
 		}
 
@@ -217,42 +233,42 @@ export namespace relay {
 		HandshakeAckPrefix ackPrefix{};
 		if (!relay_detail::recvAll(sock, &ackPrefix, sizeof(ackPrefix))) {
 			(void)winsock::CloseNetworkSocket(*tcp);
-			app::relayStatus = "Handshake: ack body failed";
+			relay::status = "Handshake: ack body failed";
 			return;
 		}
 		u16 tokenLen = ntohs(ackPrefix.tokenLen);
-		if (tokenLen > as<u16>(app::relayToken.size())) {
+		if (tokenLen > as<u16>(relay::token.size())) {
 			(void)winsock::CloseNetworkSocket(*tcp);
-			app::relayStatus = "Handshake: token too large";
+			relay::status = "Handshake: token too large";
 			return;
 		}
-		if (!relay_detail::recvAll(sock, app::relayToken.data(), tokenLen)) {
+		if (!relay_detail::recvAll(sock, relay::token.data(), tokenLen)) {
 			(void)winsock::CloseNetworkSocket(*tcp);
-			app::relayStatus = "Handshake: token read failed";
+			relay::status = "Handshake: token read failed";
 			return;
 		}
-		app::relaySessionID = ntohl(ackPrefix.sessionID);
+		relay::sessionID = ntohl(ackPrefix.sessionID);
 
 		// --- Open UDP socket ---
 		auto udp = winsock::CreateUDPSocket(host, port);
 		if (!udp) {
 			(void)winsock::CloseNetworkSocket(*tcp);
-			app::relayStatus = "UDP socket failed";
+			relay::status = "UDP socket failed";
 			return;
 		}
 
-		app::RelayTCP    = std::move(*tcp);
-		app::RelayUDP    = std::move(*udp);
+		relay::tcpEndpoint    = std::move(*tcp);
+		relay::udpEndpoint    = std::move(*udp);
 
 		// If in Listen mode, register this session as a listener over TCP
-		if (app::relayMode == app::RelayMode::Listen) {
+		if (relay::mode == relay::Mode::Listen) {
 			TCPHeader regHdr{};
 			regHdr.signature = TCP_SIGNATURE;
 			regHdr.version   = htons(VERSION);
 			regHdr.type      = as<u8>(PacketType::RegisterListener);
 			regHdr.bodyLen   = 0;
-			if (!relay_detail::sendAll(app::RelayTCP->Socket, &regHdr, sizeof(regHdr))) {
-				app::relayStatus = "RegisterListener failed";
+			if (!relay_detail::sendAll(relay::tcpEndpoint->Socket, &regHdr, sizeof(regHdr))) {
+				relay::status = "RegisterListener failed";
 				return;
 			}
 		}
@@ -261,51 +277,51 @@ export namespace relay {
 		{
 			UDPHeartbeatClient reg{};
 			reg.header    = UDP_SIGNATURE;
-			reg.type      = static_cast<u8>(PacketType::Heartbeat);
-			reg.sessionID = htonl(app::relaySessionID);
-			reg.token     = app::relayToken;
-			(void)sendto(app::RelayUDP->Socket,
-			            reinterpret_cast<const char*>(&reg), sizeof(reg), 0,
-			            reinterpret_cast<sockaddr*>(&app::RelayUDP->SenderAddr),
-			            sizeof(app::RelayUDP->SenderAddr));
+			reg.type      = as<u8>(PacketType::Heartbeat);
+			reg.sessionID = htonl(relay::sessionID);
+			reg.token     = relay::token;
+			(void)sendto(relay::udpEndpoint->Socket,
+			            raw<const char*>(&reg), sizeof(reg), 0,
+			            raw<sockaddr*>(&relay::udpEndpoint->SenderAddr),
+			            sizeof(relay::udpEndpoint->SenderAddr));
 		}
 
 		// Start TCP and UDP receive loops
-		SOCKET tcpSock = app::RelayTCP->Socket;
-		SOCKET udpSock = app::RelayUDP->Socket;
-		sockaddr_in udpServer = app::RelayUDP->SenderAddr;
+		SOCKET tcpSock = relay::tcpEndpoint->Socket;
+		SOCKET udpSock = relay::udpEndpoint->Socket;
+		sockaddr_in udpServer = relay::udpEndpoint->SenderAddr;
 		g_tcpThread = std::jthread(relay_detail::tcpLoop, tcpSock);
 		g_udpThread = std::jthread(relay_detail::udpLoop, udpSock, udpServer);
 
-		app::relayStatus = "Connected";
+		relay::status = "Connected";
 	}
 
 	void Disconnect() {
-		if (app::RelayTCP) { closesocket(app::RelayTCP->Socket); app::RelayTCP->Socket = INVALID_SOCKET; }
-		if (app::RelayUDP) { closesocket(app::RelayUDP->Socket); app::RelayUDP->Socket = INVALID_SOCKET; }
+		if (relay::tcpEndpoint) { closesocket(relay::tcpEndpoint->Socket); relay::tcpEndpoint->Socket = INVALID_SOCKET; }
+		if (relay::udpEndpoint) { closesocket(relay::udpEndpoint->Socket); relay::udpEndpoint->Socket = INVALID_SOCKET; }
 		g_tcpThread = {};
 		g_udpThread = {};
-		app::RelayTCP.reset();
-		app::RelayUDP.reset();
-		app::RelaySend    = false;
-		app::relayStatus  = "Not connected";
+		relay::tcpEndpoint.reset();
+		relay::udpEndpoint.reset();
+		relay::isSending  = false;
+		relay::status     = "Not connected";
 	}
 
 	void SendDmx(u16 universe, std::span<const u8> data) {
-		if (!app::RelayUDP) return;
+		if (!relay::udpEndpoint) return;
 
 		UDPDMXPacket pkt{};
 		pkt.header    = UDP_SIGNATURE;
-		pkt.sessionID = htonl(app::relaySessionID);
-		pkt.token     = app::relayToken;
+		pkt.sessionID = htonl(relay::sessionID);
+		pkt.token     = relay::token;
 		pkt.universe  = htons(universe);
 		const std::size_t copy = data.size() < 512 ? data.size() : 512;
 		std::copy_n(data.data(), copy, pkt.data.data());
 
-		(void)sendto(app::RelayUDP->Socket,
-		            reinterpret_cast<const char*>(&pkt), sizeof(pkt), 0,
-		            reinterpret_cast<sockaddr*>(&app::RelayUDP->SenderAddr),
-		            sizeof(app::RelayUDP->SenderAddr));
+		(void)sendto(relay::udpEndpoint->Socket,
+		            raw<const char*>(&pkt), sizeof(pkt), 0,
+		            raw<sockaddr*>(&relay::udpEndpoint->SenderAddr),
+		            sizeof(relay::udpEndpoint->SenderAddr));
 	}
 }
 
@@ -330,7 +346,7 @@ namespace relay_detail {
 			}
 		}
 		if (!st.stop_requested())
-			app::relayStatus = "Disconnected";
+			relay::status = "Disconnected";
 	}
 	// Listens for UDP packets from the server; acks UDP heartbeats, writes DMX in listen mode
 	void udpLoop(std::stop_token st, SOCKET sock, sockaddr_in serverAddr) {
@@ -340,8 +356,8 @@ namespace relay_detail {
 		while (!st.stop_requested()) {
 			sockaddr_in from{};
 			int fromLen = sizeof(from);
-			int got = recvfrom(sock, reinterpret_cast<char*>(buf.data()), as<int>(buf.size()), 0,
-			                   reinterpret_cast<sockaddr*>(&from), &fromLen);
+			int got = recvfrom(sock, raw<char*>(buf.data()), as<int>(buf.size()), 0,
+			                   raw<sockaddr*>(&from), &fromLen);
 			if (got == SOCKET_ERROR) break;
 			if (got < 4 || buf[0]!='d' || buf[1]!='m' || buf[2]!='x') continue;
 
@@ -351,24 +367,19 @@ namespace relay_detail {
 				relay::UDPHeartbeatClient ack{};
 				ack.header    = relay::UDP_SIGNATURE;
 				ack.type      = as<u8>(relay::PacketType::HeartbeatAck);
-				ack.sessionID = htonl(app::relaySessionID);
-				ack.token     = app::relayToken;
-				(void)sendto(sock, reinterpret_cast<const char*>(&ack), sizeof(ack), 0,
-				            reinterpret_cast<sockaddr*>(&serverAddr), addrLen);
+				ack.sessionID = htonl(relay::sessionID);
+				ack.token     = relay::token;
+				(void)sendto(sock, raw<const char*>(&ack), sizeof(ack), 0,
+				            raw<sockaddr*>(&serverAddr), addrLen);
 			} else if (pktType == relay::PacketType::DMX
 			        && got == as<int>(relay::UDP_DMX_FORWARDED_SIZE)
-			        && app::relayMode == app::RelayMode::Listen) {
+			        && relay::mode == relay::Mode::Listen) {
 				// Forwarded DMX: [0:3]=dmx [3]=0x03 [4:6]=universe(BE) [6:518]=data
 				u16 universe;
 				std::memcpy(&universe, buf.data() + 4, 2);
 				universe = ntohs(universe);
 				std::println("Relay UDP DMX: universe={}", universe);
-				constexpr std::size_t uniStride = 512 + 8;
-				std::size_t offset = universe * uniStride;
-				if (offset + 512 <= Render::DmxTexture.DmxData.size()) {
-					std::memcpy(Render::DmxTexture.DmxData.data() + offset, buf.data() + 6, 512);
-					app::times.signalRender();
-				}
+				if (relay::onDmxReceived) relay::onDmxReceived(universe, std::span<const u8>(buf.data() + 6, 512));
 			}
 		}
 	}
