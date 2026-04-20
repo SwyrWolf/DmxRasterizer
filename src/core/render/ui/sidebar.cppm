@@ -17,6 +17,7 @@ import appState;
 import net.artnet;
 import net.winsock;
 import net.relay;
+import net.control;
 import settings;
 import console;
 import :util;
@@ -63,24 +64,7 @@ void showArtNetMenu() {
 		
 		ImGui::BeginDisabled(app::NetConnection.has_value());
 		if (ImGui::Button("Connect")) {
-			if (winsock::winsockInit()) {
-
-				std::string ip = app::ipString();
-				std::ranges::transform(ip, ip.begin(), [](u8 c) {
-					return as<char>(std::tolower(c));
-				});
-
-				auto Addr = winsock::CreateAddress(ip, as<u16>(app::ipPort)).and_then(winsock::OpenNetworkSocket);
-				if (!Addr) {
-					std::println(stderr, "Winsock CreateAddr (ui) Err: 0x{:x}", as<int>(Addr.error()));
-					app::Debug = L"Bad address input: " + std::wstring(ip.begin(), ip.end());
-				} else {
-					app::NetConnection.emplace(std::move(*Addr));
-					app::netManager->resume();
-					auto ipStr = app::ipString();
-					app::Debug = std::format(L"Listening for Art-Net on [{}:{}]", std::wstring(ipStr.begin(), ipStr.end()), app::NetConnection->port);
-				}
-			}
+			::StartNetwork();
 		}
 		ImGui::EndDisabled();
 		

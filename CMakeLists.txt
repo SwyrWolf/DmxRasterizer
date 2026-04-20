@@ -40,6 +40,7 @@ set(MODULE_FILES
 	src/core/net/artnet.cppm
 	src/core/net/relay.cppm
 	src/core/net/winsock.cppm
+	src/core/net/control.cppm
 	
 	src/core/render/shader.cppm
 	src/core/render/render.cppm

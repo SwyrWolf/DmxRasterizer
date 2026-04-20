@@ -43,27 +43,12 @@ int main() {
 
 	Render::SetupVertexArrBuf();
 	Render::SetupTextureAndBuffer();
-	
-	auto ipStr = app::ipString();
-	auto Addr = winsock::CreateAddress(ipStr, as<u16>(app::ipPort)).and_then(winsock::OpenNetworkSocket);
-	if (!Addr) {
-		std::println(stderr, "Winsock CreateAddr Err: 0x{:x}", as<int>(Addr.error()));
-		return -1;
-	}
-	app::NetConnection = std::move(*Addr);
-	#ifdef _DEBUG
-	std::println(stderr, "IP Address: 0x{:x}", app::NetConnection->ip);
-	std::println(stderr, "IP Port: 0x{:x}", app::NetConnection->port);
-	#endif
-	app::Debug = std::format(L"Listening for Art-Net on [{}:{}]", std::wstring(ipStr.begin(), ipStr.end()), app::NetConnection->port);
-	
 
 	app::netManager = NetManager::create(
 		Render::DmxTexture.DmxData,
 		&app::times,
 		&app::Debug
 	);
-	app::netManager->start(app::NetConnection);
 
 	relay::onDmxReceived = [](u16 universe, std::span<const u8> data) {
 		constexpr std::size_t uniStride = 512 + 8;
@@ -97,18 +82,19 @@ int main() {
 	}
 	
 	app::running = false;
+	if (app::NetConnection.has_value()) {
+		if (auto r = winsock::CloseNetworkSocket(app::NetConnection.value()); !r) {
+			std::println(stderr, "Error closing network socket: 0x{:x}", as<int>(r.error()));
+		}
+		app::NetConnection.reset();
+	}
 	app::netManager->terminate();
+	relay::Disconnect();
 	app::times.signalRender();
 	renderThread.join();
 	guiThread.join();
 	
 	glDeleteBuffers(1, &Render::VBO);
 	glfwTerminate();
-	if (app::NetConnection.has_value()) {
-		if (auto r = winsock::CloseNetworkSocket(app::NetConnection.value()); !r) {
-			std::println("Winsock CloseNetworkSocket Failed: 0x{:x}", as<int>(r.error()));
-		}
-		app::NetConnection.reset();
-	}
 	std::exit(0);
 }

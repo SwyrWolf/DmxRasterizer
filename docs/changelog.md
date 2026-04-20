@@ -1,6 +1,8 @@
 ## Version 1.1.0
 New Feature:
 Added DmxRelay Support
+Added Settings Save Persistance (%appdata%/SwyrWolf/dmxr.cfg)
+UI overhaul
 Fixes:
 Removed the imgui.ini file generation
 Reading 10th art-net universe

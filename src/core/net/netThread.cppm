@@ -30,6 +30,7 @@ private:
 	std::span<char> mv_ipStr;
 	
 	public:
+	bool started{false};
 	NetManager() = default;
 	~NetManager() {
 		terminate();
@@ -48,9 +49,14 @@ private:
 	}
 
 	void start(std::optional<winsock::Endpoint>& connection) {
+		if (started) {
+			resume();
+			return;
+		}
 		m_worker = std::jthread([this, &connection](std::stop_token st) {
 			this->operatingLoop(st, connection);
 		});
+		started = true;
 	}
 
 	void resume() {
@@ -65,6 +71,7 @@ private:
 
 	void terminate() {
 		m_worker.request_stop();
+		resume();
 	}
 
 private:
