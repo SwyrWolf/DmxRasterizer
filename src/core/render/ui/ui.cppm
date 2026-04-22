@@ -53,7 +53,7 @@ constexpr const char* Title = "DMX Rasterizer | " APP_BUILD_VERSION;
 
 export bool SetupWindow() {
 	glfwDefaultWindowHints();
-	glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
+	glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
 	glfwWindowHint(GLFW_VISIBLE, GLFW_TRUE);
 	glfwWindowHint(GLFW_DECORATED, GLFW_TRUE);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);

@@ -2,7 +2,8 @@
 New Feature:
 Added DmxRelay Support
 Added Settings Save Persistance (%appdata%/SwyrWolf/dmxr.cfg)
-UI overhaul
+Added Window Resizing
+Added overhauled UI
 Fixes:
 Removed the imgui.ini file generation
 Reading 10th art-net universe
