@@ -3,6 +3,7 @@ module;
 #include <expected>
 #include <vector>
 #include <string>
+#include <print>
 
 #include "glad.h"
 #include <glfw3.h>
@@ -93,8 +94,17 @@ export namespace Render {
 		glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	}
 
-	[[nodiscard]] auto SetupShaderLoad(std::string_view vert, std::string_view frag) -> std::unique_ptr<Shader> {
-		auto shader = std::make_unique<Shader>(vert, frag);
+	[[nodiscard]] auto SetupShaderLoad(
+		std::string_view vert, 
+		std::string_view frag
+	) -> std::unique_ptr<Shader> {
+		auto sh = Shader::Create(vert, frag);
+		if (!sh) {
+			std::println("Shader::Create failed! {}", sh.error());
+		}
+
+		auto shader = std::make_unique<Shader>(std::move(*sh));
+		
 		glUseProgram(shader->m_ID);
 		glUniform2f(glGetUniformLocation(shader->m_ID, "resolution"), Render::DmxTexture.Width, Render::DmxTexture.Height);
 

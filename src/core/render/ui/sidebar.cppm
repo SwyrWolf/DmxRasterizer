@@ -23,7 +23,7 @@ import console;
 import :util;
 
 static bool showSettings_Graphics{false};
-static bool showSettings_ArtNet{false};
+static bool showSettings_ArtNet{true};
 static bool showSettings_Relay{false};
 static bool showSettings_Logs{false};
 static bool showSettings_Lights{false};
