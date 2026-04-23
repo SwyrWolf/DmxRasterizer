@@ -98,12 +98,14 @@ target_link_libraries(
 	Spout_static
 )
 
+# WIN32_EXECUTABLE $<CONFIG:Release>
 # Hide console only in Release
 set_target_properties(${PROJECT_NAME} PROPERTIES
-	WIN32_EXECUTABLE $<CONFIG:Release>
+	WIN32_EXECUTABLE TRUE
 )
 
+# $<$<CONFIG:Release>:-Wl,/ENTRY:mainCRTStartup>
 # In Release, use main() as entrypoint even under GUI subsystem
 target_link_options(${PROJECT_NAME} PRIVATE
-	$<$<CONFIG:Release>:-Wl,/ENTRY:mainCRTStartup>
+	-Wl,/ENTRY:mainCRTStartup
 )
